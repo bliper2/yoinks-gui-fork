@@ -18,7 +18,7 @@ Under the hood it's just [yt-dlp](https://github.com/yt-dlp/yt-dlp) doing the ex
 
 | Format picker | Downloading |
 |---|---|
-| ![format list](https://i.imgur.com/DDsjQof.png) | ![progress]() |
+| ![format list](https://i.imgur.com/DDsjQof.png) | ![progress](https://i.imgur.com/UtHlEAq.png) |
 
 ## Installation
 
