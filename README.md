@@ -6,6 +6,8 @@ Under the hood it's just [yt-dlp](https://github.com/yt-dlp/yt-dlp) doing the ex
 
 ![main window](https://i.imgur.com/YWRSqEl.png)
 
+This is a fork of [pablostanley/yoinks](https://github.com/pablostanley/yoinks). All credit for the original app to him — this fork just builds on it.
+
 ## Features
 
 - Paste a link, get a list of available formats — 144p up to 1080p, or audio-only as MP3
