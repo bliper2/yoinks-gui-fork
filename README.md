@@ -64,5 +64,4 @@ yoinks-gui/
 This is meant as a personal-archiving tool. Only download content you actually have the right to keep, and respect the copyright and terms of service of whatever site you're pulling from.
 
 ## License
-
-See [MRKRAPS].
+See [LICENSE](LICENSE).
