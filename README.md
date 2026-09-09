@@ -20,7 +20,7 @@ This is a fork of [pablostanley/yoinks](https://github.com/pablostanley/yoinks).
 
 | Format picker | Downloading |
 |---|---|
-| ![format list](https://i.imgur.com/DDsjQof.png) | ![progress](https://i.imgur.com/UtHlEAq.png) |
+| ![format list](https://i.imgur.com/JdGyMiN.png) | ![progress](https://i.imgur.com/UtHlEAq.png) |
 
 ## Installation
 
