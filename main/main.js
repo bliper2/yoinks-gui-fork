@@ -15,6 +15,10 @@ const files = require('../core/files')
 const updater = require('./updater')
 
 const ROOT = path.join(__dirname, '..')
+// Same as "appId" in package.json (the installer's shortcut uses it): taskbar
+// pins and notifications group under one Yoinks icon.
+const APP_ID = 'com.mrkraps.yoinks-gui'
+if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
 const STATE_PATH = path.join(app.getPath('userData'), 'app-state.json')
 const LEGAL = { terms: 'terms.md', privacy: 'privacy.md' }
 
@@ -95,6 +99,20 @@ function createWindow() {
       sandbox: true,
     },
   })
+
+  // The portable exe unpacks the app to a temp folder and runs it from there,
+  // so "Pin to taskbar" would pin that temp copy, which is deleted on exit.
+  // Point the pin (and its icon) at the portable exe itself instead.
+  const portableExe = process.env.PORTABLE_EXECUTABLE_FILE
+  if (process.platform === 'win32' && portableExe) {
+    mainWindow.setAppDetails({
+      appId: APP_ID,
+      relaunchCommand: `"${portableExe}"`,
+      relaunchDisplayName: 'Yoinks',
+      appIconPath: portableExe,
+      appIconIndex: 0,
+    })
+  }
 
   mainWindow.loadFile(path.join(ROOT, 'extension', 'app.html'))
   mainWindow.once('ready-to-show', () => mainWindow.show())
