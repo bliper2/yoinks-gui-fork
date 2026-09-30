@@ -34,6 +34,9 @@ class EngineLogicTest {
         assertTrue(net.retryable)
         assertEquals("No internet connection, or the connection dropped. Check your network and try again.", ErrorTranslator.translate(java.net.UnknownHostException("x")).message)
         assertEquals("snapchat-private", ErrorTranslator.translate("ERROR: Unsupported URL: https://snapchat.com/t/x", Platform.SNAPCHAT).code)
+        val outdated = ErrorTranslator.translate("ERROR: [TikTok] 7690988127615: Unable to extract webpage video data; please report this issue on  https://github.com/yt-dlp/yt-dlp/issues?q= , filling out the appropriate issue template. Confirm you are on the latest version using  yt-dlp -U")
+        assertEquals("outdated", outdated.code)
+        assertTrue(outdated.message.startsWith("yt-dlp could not read this page"))
         val unknown = ErrorTranslator.translate("ERROR: [generic] something odd happened")
         assertEquals("something odd happened", unknown.message)
     }

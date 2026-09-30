@@ -1,6 +1,7 @@
 package com.yoinks.app.data.engine
 
 import android.content.Context
+import androidx.datastore.core.DataStore
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
@@ -24,7 +25,10 @@ import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.domain.model.YoinksException
 import com.yoinks.app.domain.errors.ErrorTranslator.snapchatPrivate
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -32,6 +36,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.net.URLEncoder
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,6 +46,8 @@ class YtDlpEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val json: Json,
     private val cookies: CookieStore,
+    private val scope: CoroutineScope,
+    private val settingsStore: DataStore<AppSettings>,
 ) : MediaEngine {
     private val initLock = Mutex()
     @Volatile private var ready = false
@@ -56,9 +63,13 @@ class YtDlpEngine @Inject constructor(
                 } catch (e: YoutubeDLException) {
                     throw YoinksException(YoinksError("engine", "The download engine could not start. Reinstall Yoinks if this keeps happening.", false, e.message.orEmpty()), e)
                 }
+                ytdlpVersion = YoutubeDL.getInstance().version(context)
                 ready = true
             }
         }
+        // The yt-dlp bundled with the app ages fast: sites change and it
+        // stops working. Update in the background right away when it is old.
+        if (isOld(ytdlpVersion)) scope.launch { updateIfStale() }
     }
 
     /** Run yt-dlp. [urls] go last, after "--", so they can never be read as options. */
@@ -71,14 +82,46 @@ class YtDlpEngine @Inject constructor(
     ): YoutubeDLResponse = withContext(Dispatchers.IO) {
         ensureReady()
         require(urls.all { it.startsWith("https://") || it.startsWith("http://") }) { "Only web links can be downloaded." }
+        val versionBefore = ytdlpVersion
         val request = YoutubeDLRequest(urls).addCommands(args + if (urls.isEmpty()) emptyList() else listOf("--"))
         try {
-            YoutubeDL.getInstance().execute(request, processId, callback)
+            try {
+                YoutubeDL.getInstance().execute(request, processId, callback)
+            } catch (e: YoutubeDLException) {
+                // A site changed and this yt-dlp can't read it (the copy bundled
+                // with the app is months old): update now and try once more.
+                if (ErrorTranslator.translate(e.message, platform).code != "outdated") throw e
+                updateIfStale()
+                if (ytdlpVersion == versionBefore) throw e
+                YoutubeDL.getInstance().execute(request, processId, callback)
+            }
         } catch (e: YoutubeDL.CanceledException) {
             throw StoppedException()
         } catch (e: YoutubeDLException) {
             throw YoinksException(ErrorTranslator.translate(e.message, platform), e)
         }
+    }
+
+    private val updateLock = Mutex()
+    @Volatile private var lastAutoUpdate = 0L
+    @Volatile private var ytdlpVersion: String? = null
+
+    /**
+     * Update yt-dlp (when auto-update is on in Settings) unless that was tried
+     * in the last 30 minutes; waits for one already running.
+     */
+    private suspend fun updateIfStale() = updateLock.withLock {
+        if (!settingsStore.data.first().ytdlpAutoUpdate) return@withLock
+        val now = System.currentTimeMillis()
+        if (now - lastAutoUpdate < AUTO_UPDATE_EVERY_MS) return@withLock
+        lastAutoUpdate = now
+        runCatching { update() }
+    }
+
+    /** yt-dlp versions are dates ("2025.11.12"); older than 60 days counts as old. */
+    private fun isOld(version: String?): Boolean {
+        val date = version?.let { runCatching { LocalDate.parse(it.take(10).replace('.', '-')) }.getOrNull() } ?: return false
+        return date.isBefore(LocalDate.now().minusDays(60))
     }
 
     override suspend fun probe(url: String, playlist: Boolean, settings: AppSettings): MediaInfo {
@@ -156,6 +199,7 @@ class YtDlpEngine @Inject constructor(
             throw YoinksException(ErrorTranslator.translate(e).copy(message = "yt-dlp could not be updated. Check your connection and try again."), e)
         }
         val after = YoutubeDL.getInstance().version(context)
+        ytdlpVersion = after
         val updated = status == YoutubeDL.UpdateStatus.DONE
         UpdateResult(after, updated, if (updated) "Updated yt-dlp to $after." else "yt-dlp is already up to date ($before).")
     }
@@ -168,6 +212,7 @@ class YtDlpEngine @Inject constructor(
             .toList()
 
     private companion object {
+        const val AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000L
         val PARTIAL = listOf(".part", ".ytdl", ".json", ".temp", ".tmp", ".webp", ".jpg", ".png", ".vtt", ".srt")
     }
 }
