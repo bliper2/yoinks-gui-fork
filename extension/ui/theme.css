@@ -1,0 +1,92 @@
+/*
+ * Yoinks design tokens: the one theme file shared by the popup, the settings
+ * page and the desktop app. Colors are CSS variables; ui/theme.js sets
+ * data-theme (light/dark) and the accent variables at runtime.
+ */
+
+:root {
+  /* accent (overridden by theme.js from the saved preset / custom color) */
+  --accent: #8b6bff;
+  --accent-2: #22d3ee;
+  --on-accent: #0a0d13;
+  --accent-grad: linear-gradient(120deg, var(--accent), var(--accent-2));
+
+  --danger: #e5484d;
+  --success: #2fb47c;
+  --warning: #e8a317;
+
+  --font-ui: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'SF Mono', monospace;
+
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+
+  --control-h: 36px;
+  --control-h-lg: 42px;
+  --control-h-sm: 28px;
+
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+}
+
+/* ---------- dark (default) ---------- */
+:root,
+:root[data-theme='dark'] {
+  --bg: #0a0d13;
+  --bg-mesh-a: color-mix(in srgb, var(--accent) 32%, #0a0d13);
+  --bg-mesh-b: color-mix(in srgb, var(--accent-2) 22%, #0a0d13);
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-solid: #141824;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text: #e8edf4;
+  --text-muted: #9aa3b5;
+  --text-faint: #6f7a8e;
+  --accent-ink: color-mix(in srgb, var(--accent) 70%, white);
+  --field-bg: rgba(0, 0, 0, 0.28);
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  --focus: color-mix(in srgb, var(--accent-2) 80%, white);
+  --danger-bg: rgba(229, 72, 77, 0.14);
+  --success-bg: rgba(47, 180, 124, 0.14);
+  --warning-bg: rgba(232, 163, 23, 0.14);
+  color-scheme: dark;
+}
+
+/* ---------- light ---------- */
+:root[data-theme='light'] {
+  --bg: #f6f7fb;
+  --bg-mesh-a: color-mix(in srgb, var(--accent) 16%, #f6f7fb);
+  --bg-mesh-b: color-mix(in srgb, var(--accent-2) 14%, #f6f7fb);
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-2: #eef0f6;
+  --surface-solid: #ffffff;
+  --border: rgba(15, 23, 42, 0.11);
+  --border-strong: rgba(15, 23, 42, 0.22);
+  --text: #141925;
+  --text-muted: #525c70;
+  --text-faint: #6b7385;
+  --accent-ink: color-mix(in srgb, var(--accent) 72%, black);
+  --field-bg: #ffffff;
+  --shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --focus: color-mix(in srgb, var(--accent) 85%, black);
+  --danger: #cf3035;
+  --success: #1f8a5c;
+  --warning: #a86f00;
+  --danger-bg: rgba(207, 48, 53, 0.1);
+  --success-bg: rgba(31, 138, 92, 0.1);
+  --warning-bg: rgba(168, 111, 0, 0.1);
+  color-scheme: light;
+}
+
+/* Before theme.js runs, follow the OS so there is no flash. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: #f6f7fb;
+    --surface: rgba(255, 255, 255, 0.82);
+    --text: #141925;
+    color-scheme: light;
+  }
+}

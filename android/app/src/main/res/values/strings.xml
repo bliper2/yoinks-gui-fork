@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Yoinks</string>
+    <string name="share_label">Download with Yoinks</string>
+    <string name="open_label">Open with Yoinks</string>
+
+    <string name="channel_progress">Downloads in progress</string>
+    <string name="channel_progress_desc">Shows download progress while Yoinks works in the background.</string>
+    <string name="channel_results">Finished downloads</string>
+    <string name="channel_results_desc">Tells you when a download is saved or fails.</string>
+
+    <string name="notif_downloading_many">Downloading %1$d items</string>
+    <string name="notif_waiting">%1$d waiting</string>
+    <string name="notif_preparing">Preparing…</string>
+    <string name="notif_done">Saved: %1$s</string>
+    <string name="notif_failed">Failed: %1$s</string>
+    <string name="notif_saved_many">%1$d files in %2$s</string>
+    <string name="status_processing">Finishing…</string>
+    <string name="eta_left">%1$s left</string>
+    <string name="action_pause_all">Pause</string>
+    <string name="action_cancel_all">Cancel</string>
+</resources>

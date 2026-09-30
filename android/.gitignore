@@ -1,0 +1,17 @@
+# Gradle / Android Studio
+.gradle/
+build/
+.idea/
+*.iml
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Machine-specific: Android Studio writes the SDK path here.
+local.properties
+
+# Release signing secrets: never commit these.
+keystore.properties
+*.jks
+*.keystore
