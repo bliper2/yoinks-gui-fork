@@ -28,6 +28,7 @@ class EngineLogicTest {
     @Test fun friendlyErrors() {
         assertEquals("private", ErrorTranslator.translate("ERROR: [youtube] x: Private video. Sign in if you have been granted access").code)
         assertEquals("age", ErrorTranslator.translate("ERROR: Sign in to confirm your age. This video may be inappropriate for some users.").code)
+        assertEquals("login", ErrorTranslator.translate("ERROR: [Instagram] Dd6t2AbOPt_: Instagram sent an empty media response. Check if this post is accessible in your browser without being logged-in.").code)
         val net = ErrorTranslator.translate("ERROR: Unable to download webpage: <urlopen error [Errno 7] No address associated with hostname>")
         assertEquals("network", net.code)
         assertTrue(net.retryable)

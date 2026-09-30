@@ -19,7 +19,7 @@
     { code: 'bot', test: /confirm you.?re not a bot|sign in to confirm/i, retryable: false, message: 'The site wants to check you are not a bot. Wait a while, or turn on “Use browser cookies” in Settings.' },
     { code: 'members', test: /members.?only|join this channel|channel.?s members|premium members|subscriber.?only/i, retryable: false, message: 'This is for members or subscribers only. Turn on “Use browser cookies” in Settings if you have access.' },
     { code: 'private', test: /private video|this video is private|is private/i, retryable: false, message: 'This video is private.' },
-    { code: 'login', test: /login required|log in|sign in to view|requires authentication|rate-limit reached or login/i, retryable: false, message: 'The site needs you to be signed in. Turn on “Use browser cookies” in Settings.' },
+    { code: 'login', test: /login required|log in|sign in to view|requires authentication|rate-limit reached or login|empty media response/i, retryable: false, message: 'The site needs you to be signed in. Turn on “Use browser cookies” in Settings.' },
     { code: 'region', test: /not (made this video )?available in your country|geo.?restrict|not available from your location/i, retryable: false, message: 'This video is blocked in your country.' },
     { code: 'copyright', test: /copyright/i, retryable: false, message: 'This video was taken down for copyright reasons.' },
     { code: 'live', test: /premieres in|live event will begin|this live event|is not currently live|upcoming live/i, retryable: false, message: 'This live stream or premiere has not started yet.' },

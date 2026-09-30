@@ -24,7 +24,7 @@ object ErrorTranslator {
         rule("bot", """confirm you.?re not a bot|sign in to confirm""", false, "The site wants to check you are not a bot. Try again later, or import cookies in Settings."),
         rule("members", """members.?only|join this channel|channel.?s members|subscriber.?only""", false, "This is for members or subscribers only."),
         rule("private", """private video|this video is private|is private|private account""", false, "This video is private."),
-        rule("login", """login required|log in|sign in to view|requires authentication|rate-limit reached or login""", false, "The site needs you to be signed in. Import cookies in Settings to download this."),
+        rule("login", """login required|log in|sign in to view|requires authentication|rate-limit reached or login|empty media response""", false, "The site needs you to be signed in. Import cookies in Settings to download this."),
         rule("region", """not (made this video )?available in your country|geo.?restrict|not available from your location""", false, "This video is blocked in your country."),
         rule("copyright", """copyright""", false, "This video was taken down for copyright reasons."),
         rule("live", """premieres in|live event will begin|this live event|is not currently live|upcoming live""", false, "This live stream or premiere has not started yet."),
