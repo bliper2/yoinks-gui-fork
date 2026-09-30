@@ -35,6 +35,8 @@ object ErrorTranslator {
         rule("ratelimit", """HTTP Error 429|too many requests""", true, "The site is limiting downloads right now. Try again in a few minutes."),
         rule("forbidden", """HTTP Error 403|forbidden""", true, "The site refused the download (error 403). Updating yt-dlp in Settings usually fixes this."),
         rule("network", """timed out|timeout|connection (reset|refused|aborted)|unable to resolve host|getaddrinfo|ENOTFOUND|ECONNRESET|unable to download (webpage|json)|network is unreachable|failed to establish|SSL""", true, "No internet connection, or the connection dropped. Check your network and try again."),
+        // Last: yt-dlp's hint for extractors a site change has broken.
+        rule("outdated", """unable to extract|please report this issue|confirm you are on the latest version""", false, "yt-dlp could not read this page; the site probably changed. Update yt-dlp in Settings, then try again."),
     )
 
     fun translate(raw: String?, platform: Platform = Platform.OTHER): YoinksError {

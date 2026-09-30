@@ -32,6 +32,8 @@
     { code: 'ratelimit', test: /HTTP Error 429|too many requests/i, retryable: true, message: 'The site is limiting downloads right now. Try again in a few minutes.' },
     { code: 'forbidden', test: /HTTP Error 403|forbidden/i, retryable: true, message: 'The site refused the download (error 403). Updating yt-dlp in Settings usually fixes this.' },
     { code: 'network', test: /timed out|timeout|connection (reset|refused|aborted)|getaddrinfo|ENOTFOUND|ECONNRESET|unable to download (webpage|json)|network is unreachable|fetch failed|SSL/i, retryable: true, message: 'Network problem. Check your connection and try again.' },
+    // Last: yt-dlp's hint for extractors a site change has broken.
+    { code: 'outdated', test: /unable to extract|please report this issue|confirm you are on the latest version/i, retryable: false, message: 'yt-dlp could not read this page; the site probably changed. Update yt-dlp in Settings, then try again.' },
   ]
 
   /**
