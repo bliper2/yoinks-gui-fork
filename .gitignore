@@ -1,0 +1,12 @@
+node_modules/
+release/
+*.log
+.DS_Store
+
+# ffmpeg binaries (~100 MB each): shipped in releases, not in git. See README.
+ffmpeg.exe
+ffprobe.exe
+ffplay.exe
+
+# Written by "npm run extension:install" with this machine's path
+host/com.yoinks.host.json
