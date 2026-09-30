@@ -88,9 +88,10 @@ class YtDlpEngine @Inject constructor(
             try {
                 YoutubeDL.getInstance().execute(request, processId, callback)
             } catch (e: YoutubeDLException) {
-                // A site changed and this yt-dlp can't read it (the copy bundled
-                // with the app is months old): update now and try once more.
-                if (ErrorTranslator.translate(e.message, platform).code != "outdated") throw e
+                // An old yt-dlp can't read a changed site; it then says "unable
+                // to extract", "login required" (Instagram) or 403. Update now
+                // and try once more; a real private post fails again.
+                if (ErrorTranslator.translate(e.message).code !in RETRY_AFTER_UPDATE) throw e
                 updateIfStale()
                 if (ytdlpVersion == versionBefore) throw e
                 YoutubeDL.getInstance().execute(request, processId, callback)
@@ -213,6 +214,7 @@ class YtDlpEngine @Inject constructor(
 
     private companion object {
         const val AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000L
+        val RETRY_AFTER_UPDATE = setOf("outdated", "login", "forbidden")
         val PARTIAL = listOf(".part", ".ytdl", ".json", ".temp", ".tmp", ".webp", ".jpg", ".png", ".vtt", ".srt")
     }
 }
