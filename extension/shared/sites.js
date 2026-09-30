@@ -57,7 +57,8 @@
       music: true,
     },
     { id: 'tiktok', name: 'TikTok', host: /^(www\.)?tiktok\.com$/, media: /^\/@[^/]+\/(video|photo)\/\d+/, music: false },
-    { id: 'instagram', name: 'Instagram', host: /^(www\.)?instagram\.com$/, media: /^\/(p|reel|reels|tv)\/[\w-]+/, music: false },
+    // Posts open as /reel/ID or, from a profile, /username/reel/ID.
+    { id: 'instagram', name: 'Instagram', host: /^(www\.)?instagram\.com$/, media: /^\/([\w.]+\/)?(p|reel|reels|tv)\/[\w-]+/, music: false },
     { id: 'x', name: 'X', host: /^(www\.|mobile\.)?(x|twitter)\.com$/, media: /^\/[^/]+\/status\/\d+/, music: false },
     { id: 'vimeo', name: 'Vimeo', host: /^(www\.|player\.)?vimeo\.com$/, media: /^\/(video\/)?\d+|^\/channels\/[^/]+\/\d+/, music: false },
     {
