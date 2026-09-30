@@ -46,6 +46,7 @@ object ErrorTranslator {
         if (match != null) {
             // Snapchat only exposes public Spotlight/story videos to yt-dlp.
             if (platform == Platform.SNAPCHAT && match.code in setOf("unsupported", "private", "login", "removed")) return snapchatPrivate(detail)
+            if (platform == Platform.INSTAGRAM && match.code == "login") return instagramPrivate(detail)
             return YoinksError(match.code, match.message, match.retryable, detail)
         }
         if (platform == Platform.SNAPCHAT) return snapchatPrivate(detail)
@@ -59,6 +60,14 @@ object ErrorTranslator {
         is IOException -> translate(error.message ?: "network error", platform).let { if (it.code == "unknown") it.copy(code = "network", retryable = true) else it }
         else -> translate(error.message, platform)
     }
+
+    // Public posts and reels work without an account; this one is not public.
+    fun instagramPrivate(detail: String = "") = YoinksError(
+        "instagram-private",
+        "Instagram only shows this post to signed-in users, so it may be private or from a private account. Public posts and reels download fine.",
+        false,
+        detail,
+    )
 
     fun snapchatPrivate(detail: String = "") = YoinksError(
         "snapchat-private",
