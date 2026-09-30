@@ -6,7 +6,7 @@
 // arguments, and running downloads with progress. The desktop app and the
 // browser helper both use it through core/session.js.
 
-const { spawn } = require('node:child_process')
+const { spawn, spawnSync } = require('node:child_process')
 const { createWriteStream } = require('node:fs')
 const fs = require('node:fs/promises')
 const os = require('node:os')
@@ -54,12 +54,40 @@ function ytDlpAssetName() {
   return process.arch === 'arm64' ? 'yt-dlp_linux_aarch64' : 'yt-dlp_linux'
 }
 
+/**
+ * Stop a child and everything it started. On Windows yt-dlp.exe is a
+ * launcher that runs the real yt-dlp as its own child process; killing only
+ * the launcher (what child.kill() does) leaves that one downloading.
+ */
+function killTree(child, { sync = false } = {}) {
+  if (child.exitCode !== null || child.signalCode !== null) return
+  if (process.platform !== 'win32' || !child.pid) {
+    child.kill('SIGTERM')
+    return
+  }
+  const taskkill = ['/pid', String(child.pid), '/T', '/F']
+  if (sync) spawnSync('taskkill', taskkill, { windowsHide: true })
+  else spawn('taskkill', taskkill, { windowsHide: true }).on('error', () => child.kill())
+}
+
+/** spawn(), but aborting `signal` stops the whole process tree (killTree). */
+function spawnKillable(cmd, args, { signal, ...options } = {}) {
+  signal?.throwIfAborted()
+  const child = spawn(cmd, args, { ...options, windowsHide: true })
+  if (signal) {
+    const onAbort = () => killTree(child)
+    signal.addEventListener('abort', onAbort, { once: true })
+    child.once('close', () => signal.removeEventListener('abort', onAbort))
+  }
+  return child
+}
+
 /** Run a command, resolving { code, stdout, stderr } (never rejects on exit code). */
 function run(cmd, args, { signal, timeout = 0 } = {}) {
   return new Promise((resolve, reject) => {
     let child
     try {
-      child = spawn(cmd, args, { signal, timeout, windowsHide: true })
+      child = spawnKillable(cmd, args, { signal, timeout })
     } catch (err) {
       reject(err)
       return
@@ -72,7 +100,7 @@ function run(cmd, args, { signal, timeout = 0 } = {}) {
     child.stdout.on('data', chunk => (stdout += chunk))
     child.stderr.on('data', chunk => (stderr += chunk))
     child.on('error', reject)
-    child.on('close', code => resolve({ code, stdout, stderr }))
+    child.on('close', code => (signal?.aborted ? reject(signal.reason) : resolve({ code, stdout, stderr })))
   })
 }
 
@@ -263,12 +291,6 @@ function formatBytes(bytes) {
   return `${value >= 100 || unit === 0 ? Math.round(value) : value.toFixed(1)}${units[unit]}`
 }
 
-function scoreVideo(f) {
-  let score = f.tbr ?? 0
-  if (f.ext === 'mp4') score += 10_000
-  if (f.vcodec && f.vcodec.startsWith('avc')) score += 5_000
-  return score
-}
 
 /**
  * The format list shown to the user: one entry per video height plus audio.
@@ -293,9 +315,13 @@ function buildChoices(info, { audioFormat = 'mp3' } = {}) {
   const videos = formats.filter(f => f.vcodec && f.vcodec !== 'none' && f.height)
   const heights = [...new Set(videos.map(f => f.height))].sort((a, b) => b - a)
   const choices = heights.slice(0, MAX_VIDEO_CHOICES).map(height => {
-    const best = videos.filter(f => f.height === height).sort((a, b) => scoreVideo(b) - scoreVideo(a))[0]
+    // yt-dlp lists formats worst to best, so the last one at this height is
+    // the one "bv*[height=h]" downloads. No size known: show none rather
+    // than the audio track's size alone.
+    const best = videos.filter(f => f.height === height).at(-1)
     const muxed = best.acodec && best.acodec !== 'none'
-    const size = (best.filesize ?? best.filesize_approx ?? 0) + (muxed ? 0 : (audioSize ?? 0))
+    const videoSize = best.filesize ?? best.filesize_approx ?? 0
+    const size = videoSize > 0 ? videoSize + (muxed ? 0 : (audioSize ?? 0)) : 0
     return { kind: 'video', label: `${height}p`, height, exact: true, ext: 'mp4', sizeLabel: size > 0 ? formatBytes(size) : '' }
   })
   if (choices.length === 0 && formats.some(f => f.vcodec && f.vcodec !== 'none')) {
@@ -372,7 +398,7 @@ const PROGRESS_TEMPLATE = `${PROGRESS_PREFIX}%(progress.downloaded_bytes)s|%(pro
 const PROCESSING_LINE = /^\[(Merger|ExtractAudio|EmbedThumbnail|EmbedSubtitle|Metadata|ThumbnailsConvertor|FixupM4a|FixupM3u8|MetadataParser|ModifyChapters|SplitChapters)\]/
 
 const activeChildren = new Set()
-process.on('exit', () => activeChildren.forEach(child => child.kill('SIGTERM')))
+process.on('exit', () => activeChildren.forEach(child => killTree(child, { sync: true })))
 
 /**
  * Run one download.
@@ -406,7 +432,13 @@ function download(opts, handlers, signal) {
   ]
 
   return new Promise((resolve, reject) => {
-    const child = spawn(opts.ytdlp, args, { signal, windowsHide: true })
+    let child
+    try {
+      child = spawnKillable(opts.ytdlp, args, { signal })
+    } catch (err) {
+      reject(signal?.aborted ? new YoinksError({ code: 'cancelled', message: 'Download cancelled.' }) : fromYtdlp(err.message))
+      return
+    }
     activeChildren.add(child)
 
     let stderr = ''
@@ -453,6 +485,10 @@ function download(opts, handlers, signal) {
           handlers.onProcessing?.()
         } else if (line.startsWith('[download] Destination: ')) {
           destinations.push(line.slice('[download] Destination: '.length))
+        } else if (/^\[info\] Writing video thumbnail .+ to: /.test(line)) {
+          // The thumbnail is saved (then converted to .jpg) before the video.
+          const thumb = line.slice(line.indexOf(' to: ') + ' to: '.length)
+          destinations.push(thumb, thumb.replace(/\.[^.\\/]+$/, '.jpg'))
         } else if (path.isAbsolute(line)) {
           filepath = line
         }

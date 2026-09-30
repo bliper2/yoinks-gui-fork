@@ -20,11 +20,75 @@ Everything is on the [Releases](../../releases) page:
 | `Yoinks-<version>-x64-portable.exe` | Windows, no install — just run it |
 | `Yoinks-extension-<version>.zip` | Browser extension + its helper (see [Browser extension](#browser-extension)) |
 | `Yoinks-android-<version>-arm64-v8a.apk` | Android, almost all phones from the last 8 years |
+| `Yoinks-android-<version>-armeabi-v7a.apk` | Android, old 32-bit phones |
 | `Yoinks-android-<version>-universal.apk` | Android, if unsure which one you need |
 
 The Windows builds are unsigned, so SmartScreen may warn on first run
 (**More info → Run anyway**). The Android APKs are sideloaded — see
 [android/README.md](android/README.md#install-on-a-phone).
+
+## Screenshots
+
+**Desktop app** (the extension's popup is the same UI)
+
+<p>
+<img src="docs/screenshots/desktop-formats.png" width="270" alt="Format list for a YouTube video">
+<img src="docs/screenshots/desktop-queue.png" width="270" alt="Download queue with progress">
+<img src="docs/screenshots/desktop-spotify.png" width="270" alt="Spotify track matched on YouTube Music">
+<img src="docs/screenshots/desktop-settings.png" width="270" alt="Settings">
+</p>
+
+**Browser extension** — Yoink buttons on the page
+
+<p>
+<img src="docs/screenshots/extension-youtube.png" width="420" alt="Yoink button and its menu on YouTube">
+<img src="docs/screenshots/extension-youtube-music.png" width="420" alt="Yoink all in Up Next and the player-bar button on YouTube Music">
+<img src="docs/screenshots/extension-soundcloud.png" width="420" alt="Yoink button on a SoundCloud track and in the player bar">
+</p>
+
+**Android**
+
+<p>
+<img src="docs/screenshots/android-home.png" width="200" alt="Home">
+<img src="docs/screenshots/android-share-sheet.png" width="200" alt="Share sheet with qualities">
+<img src="docs/screenshots/android-spotify.png" width="200" alt="Spotify matches">
+<img src="docs/screenshots/android-queue.png" width="200" alt="Queue">
+<img src="docs/screenshots/android-settings.png" width="200" alt="Settings">
+</p>
+
+(Android screenshots are rendered from sample data with `gradlew testDebugUnitTest --tests com.yoinks.app.ScreenshotTest`.)
+
+## Updates
+
+- **Desktop, installed:** checks this repo's latest release at start and every
+  6 hours, downloads a newer version in the background and asks to restart
+  (or installs when you close Yoinks).
+- **Desktop, portable:** can't replace itself; shows a notification that opens
+  the Releases page.
+- **Android:** checks at start and offers **Update**; it downloads the APK for
+  your phone and opens Android's installer (allow "Install unknown apps" for
+  Yoinks the first time).
+- **Extension:** unpacked extensions don't update themselves; download the new
+  zip and click reload ↻ on the extension card.
+- yt-dlp updates itself separately (weekly, Settings → yt-dlp).
+
+### Publishing a new version
+
+1. Bump `version` in `package.json` and `versionName` / `versionCode` in
+   `android/app/build.gradle.kts` to the same version (e.g. `2.1.0` / `210`).
+2. `npm run dist:win` and, in `android/`, `gradlew assembleDebug` (or
+   `assembleRelease` with your key).
+3. Create a GitHub release tagged `v2.1.0` and upload:
+   `release/Yoinks-2.1.0-x64-setup.exe`, `…-setup.exe.blockmap`,
+   `release/latest.yml` (the desktop updater reads this), `…-portable.exe`,
+   the extension zip, and the APKs renamed to
+   `Yoinks-android-2.1.0-arm64-v8a.apk`, `…-armeabi-v7a.apk`, `…-universal.apk`
+   (the Android updater looks for these names).
+
+Android installs an update only when it is signed with the same key as the
+installed app, so always build updates on the same machine/key (debug builds
+use `%USERPROFILE%\.android\debug.keystore`; keep a backup of it, or switch
+to a release key — see [android/README.md](android/README.md#signed-release-apk)).
 
 ## Requirements (to run from source)
 
@@ -148,6 +212,7 @@ the page) · clear history, reset, export/import JSON · Terms and Privacy.
 ```
 main/
   main.js          Electron main: window, IPC, controller with in-process backend
+  updater.js       app updates from GitHub releases (electron-updater)
   ytdlp.js         the engine: find/update yt-dlp, probe, formats, music search,
                    settings -> yt-dlp arguments, downloads with progress/pause
 core/              Node code shared by the desktop app and the browser helper

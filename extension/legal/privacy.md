@@ -16,6 +16,7 @@ Only the requests needed to do what you asked:
 - Requests to the website you are downloading from (for example YouTube or SoundCloud), made by yt-dlp.
 - For Spotify links: a request to Spotify's public page for that link (to read the song name, artist and cover), and a search on YouTube Music.
 - Once a week (you can turn this off in Settings), a check on GitHub for a newer version of yt-dlp.
+- Desktop app only (installed or portable): at start and every few hours, a check on GitHub for a newer version of Yoinks. The installed app downloads it in the background and asks before restarting.
 
 ## What is stored on your computer
 

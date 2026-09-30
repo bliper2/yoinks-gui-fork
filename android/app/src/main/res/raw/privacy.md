@@ -17,6 +17,7 @@ Only the requests needed to do what you asked:
 - Opening share short links (like vm.tiktok.com) to find the real page they point to.
 - For Spotify links: a request to Spotify's public page for that link, and a search on YouTube Music.
 - About once a week (you can change or turn this off in Settings): a check on GitHub for a newer yt-dlp.
+- Each time you open Yoinks: a check on GitHub for a newer version of Yoinks. The update is only downloaded and installed if you tap Update and Install.
 
 ## What is stored on your phone
 
@@ -31,6 +32,7 @@ Off by default. If you turn on "Look for links on the clipboard", Yoinks reads t
 ## Permissions
 
 - **Internet and network state**: to download, and to wait for Wi-Fi if you ask.
+- **Install apps**: to install a Yoinks update you chose to download. Android asks you first.
 - **Notifications**: to show progress and tell you when a download is done.
 - **Foreground service and wake lock**: so downloads continue with the screen off.
 - **Storage (Android 8 and 9 only)**: to save into Movies and Music. Newer Android versions don't need it.

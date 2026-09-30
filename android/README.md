@@ -129,6 +129,21 @@ For long downloads, set Settings → Apps → Yoinks → Battery → **Unrestric
   search → matches with a confidence score you can change → download with
   Spotify's title, artist, album and cover written into the file.
 
+## Updates
+
+At start Yoinks checks the latest GitHub release of
+[bliper2/yoinks-gui-fork](https://github.com/bliper2/yoinks-gui-fork/releases)
+(tag `v<versionName>`). If it is newer, **Update** downloads
+`Yoinks-android-<version>-<abi>.apk` (or `…-universal.apk`) and opens Android's
+installer. Android only accepts it when it is signed with the same key as the
+installed app. Publishing steps: see the main README, "Publishing a new version".
+
+## Screenshots
+
+`gradlew testDebugUnitTest --tests com.yoinks.app.ScreenshotTest` renders the
+main screens from their preview data (Robolectric + Roborazzi, no phone) to
+`app/build/screenshots/`.
+
 ## License
 
 GPL-3.0 (Yoinks for Android includes youtubedl-android, which is GPL-3.0).

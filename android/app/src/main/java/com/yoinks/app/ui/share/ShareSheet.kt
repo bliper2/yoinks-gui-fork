@@ -329,12 +329,12 @@ private val previewActions = SheetActions({}, { _, _, _ -> }, {}, { _, _, _ -> }
 
 @Preview(name = "Sheet – video", widthDp = 400, heightDp = 800, showBackground = true)
 @Composable
-private fun MediaSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Media(PreviewData.media), previewActions) } }
+internal fun MediaSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Media(PreviewData.media), previewActions) } }
 
 @Preview(name = "Sheet – Spotify", widthDp = 400, heightDp = 800, showBackground = true)
 @Composable
-private fun SpotifySheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Spotify("https://open.spotify.com/album/x", PreviewData.spotify), previewActions) } }
+internal fun SpotifySheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Spotify("https://open.spotify.com/album/x", PreviewData.spotify), previewActions) } }
 
 @Preview(name = "Sheet – error", widthDp = 400, showBackground = true)
 @Composable
-private fun ErrorSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Failed("https://x.com/a/status/1", YoinksError("private", "This video is private.", false)), previewActions) } }
+internal fun ErrorSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Failed("https://x.com/a/status/1", YoinksError("private", "This video is private.", false)), previewActions) } }

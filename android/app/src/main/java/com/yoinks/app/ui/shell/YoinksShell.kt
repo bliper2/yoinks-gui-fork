@@ -58,6 +58,7 @@ import com.yoinks.app.ui.settings.LegalPage
 import com.yoinks.app.ui.settings.SettingsRoute
 import com.yoinks.app.ui.share.ShareViewModel
 import com.yoinks.app.ui.theme.YoinksTheme
+import com.yoinks.app.ui.update.UpdatePrompt
 
 enum class Destination(val label: String, val icon: ImageVector) {
     HOME("Download", Icons.Rounded.Download),
@@ -112,6 +113,8 @@ fun YoinksShell(
     }
 
     val activeCount = jobs.count { it.phase.isActive || it.phase.isPending }
+
+    UpdatePrompt()
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -194,12 +197,12 @@ private fun ShellPreviewBody(widthClass: WindowWidthSizeClass) = YoinksTheme {
 
 @Preview(name = "Phone", device = "spec:width=411dp,height=891dp", showSystemUi = true)
 @Composable
-private fun PhoneShellPreview() = ShellPreviewBody(WindowWidthSizeClass.Compact)
+internal fun PhoneShellPreview() = ShellPreviewBody(WindowWidthSizeClass.Compact)
 
 @Preview(name = "Foldable", device = "spec:width=673dp,height=841dp", showSystemUi = true)
 @Composable
-private fun FoldableShellPreview() = ShellPreviewBody(WindowWidthSizeClass.Medium)
+internal fun FoldableShellPreview() = ShellPreviewBody(WindowWidthSizeClass.Medium)
 
 @Preview(name = "Tablet", device = "spec:width=1280dp,height=800dp,dpi=240", showSystemUi = true)
 @Composable
-private fun TabletShellPreview() = ShellPreviewBody(WindowWidthSizeClass.Expanded)
+internal fun TabletShellPreview() = ShellPreviewBody(WindowWidthSizeClass.Expanded)
