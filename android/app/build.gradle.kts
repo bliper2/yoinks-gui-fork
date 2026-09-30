@@ -24,8 +24,10 @@ android {
         applicationId = "com.yoinks.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        // Same version as the desktop app: one GitHub release (tag v<versionName>)
+        // carries both, and the in-app updater compares against it.
+        versionCode = 200
+        versionName = "2.0.0"
     }
 
     signingConfigs {
@@ -66,6 +68,18 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs resources; Roborazzi writes the screenshots.
+            isIncludeAndroidResources = true
+            all {
+                it.systemProperty("roborazzi.test.record", "true")
+                // Robolectric reaches into JDK internals (needed on JDK 21+).
+                it.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED", "--add-opens=java.base/java.io=ALL-UNNAMED")
+            }
+        }
     }
 
     buildFeatures {
@@ -130,4 +144,11 @@ dependencies {
     implementation(libs.youtubedl.ffmpeg)
 
     testImplementation(libs.junit)
+    // Screenshots of the Compose screens (ScreenshotTest), no phone needed.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

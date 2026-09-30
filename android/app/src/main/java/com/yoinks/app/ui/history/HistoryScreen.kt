@@ -159,4 +159,4 @@ fun HistoryScreen(
 
 @PreviewScreenSizes
 @Composable
-private fun HistoryPreview() = YoinksTheme { Surface { HistoryScreen(PreviewData.history, {}, {}, { _, _ -> }, {}) } }
+internal fun HistoryPreview() = YoinksTheme { Surface { HistoryScreen(PreviewData.history, {}, {}, { _, _ -> }, {}) } }

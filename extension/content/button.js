@@ -77,11 +77,10 @@
     :host([data-variant=floating]) .logo rect { fill: #0a0d13; }
 
     /* menu */
-    .menu { position: absolute; top: calc(100% + 6px); right: 0; min-width: 210px; padding: 6px;
+    /* fixed + placed by placeMenu(): sites clip or scroll their button rows */
+    .menu { position: fixed; top: 0; left: 0; min-width: 210px; padding: 6px;
       background: #1c1f28; color: #e8edf4; border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
       box-shadow: 0 16px 40px rgba(0,0,0,.4); font: 400 13px/1.3 'Segoe UI', system-ui, sans-serif; z-index: 2147483001; }
-    .menu.up { top: auto; bottom: calc(100% + 6px); }
-    .menu.left { top: 0; right: calc(100% + 12px); }
     .menu[hidden] { display: none; }
     .item { display: flex; width: 100%; justify-content: flex-start; gap: 10px; padding: 8px 10px; border-radius: 8px; height: auto; }
     .item:hover, .item:focus-visible { background: rgba(255,255,255,.08); background-image: none; outline: none; }
@@ -211,7 +210,7 @@
     const caret = el('button', { class: 'caret', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More download options', title: 'More options' }, [
       svg('svg', { viewBox: '0 0 10 10', 'aria-hidden': 'true' }, [svg('path', { d: 'M1 3l4 4 4-4z' })]),
     ])
-    const menu = el('div', { class: `menu${menuLeft ? ' left' : menuUp ? ' up' : ''}`, role: 'menu', hidden: true })
+    const menu = el('div', { class: 'menu', role: 'menu', hidden: true })
     const wrap = el('div', { class: 'wrap', 'data-state': 'idle' }, [main, caret, menu])
     shadow.append(wrap)
 
@@ -290,21 +289,43 @@
         quick('clip', { start: s, end: e })
       })
       menu.replaceChildren(form)
-      end.focus()
+      placeMenu()
+      end.focus({ preventScroll: true })
+    }
+
+    // Next to the button in viewport coordinates: below and right-aligned,
+    // above when asked or when there is no room below, or to the left for
+    // side columns; always kept inside the window.
+    function placeMenu() {
+      const anchor = wrap.getBoundingClientRect()
+      const { width, height } = menu.getBoundingClientRect()
+      const gap = 6
+      let left = menuLeft ? anchor.left - 12 - width : anchor.right - width
+      let top = menuLeft ? anchor.top : anchor.bottom + gap
+      if (!menuLeft && (menuUp || top + height > innerHeight - 8) && anchor.top - gap - height >= 8) top = anchor.top - gap - height
+      left = Math.min(Math.max(8, left), innerWidth - width - 8)
+      top = Math.min(Math.max(8, top), innerHeight - height - 8)
+      menu.style.left = `${Math.round(left)}px`
+      menu.style.top = `${Math.round(top)}px`
     }
 
     function openMenu() {
       menu.replaceChildren(...menuItems())
       menu.hidden = false
+      placeMenu()
       caret.setAttribute('aria-expanded', 'true')
-      menu.querySelector('.item')?.focus()
+      menu.querySelector('.item')?.focus({ preventScroll: true })
       document.addEventListener('pointerdown', outside, true)
+      addEventListener('scroll', placeMenu, true)
+      addEventListener('resize', placeMenu)
     }
 
     function closeMenu() {
       menu.hidden = true
       caret.setAttribute('aria-expanded', 'false')
       document.removeEventListener('pointerdown', outside, true)
+      removeEventListener('scroll', placeMenu, true)
+      removeEventListener('resize', placeMenu)
     }
 
     function outside(event) {
@@ -320,7 +341,7 @@
       if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !menu.hidden) {
         const items = [...menu.querySelectorAll('.item')]
         const i = items.indexOf(shadow.activeElement)
-        items[(i + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus()
+        items[(i + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus({ preventScroll: true })
         event.preventDefault()
       }
     })

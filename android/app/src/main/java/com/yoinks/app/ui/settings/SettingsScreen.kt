@@ -390,6 +390,6 @@ private val previewCallbacks = SettingsCallbacks({}, {}, {}, {}, {}, {}, {}, {},
 
 @PreviewScreenSizes
 @Composable
-private fun SettingsPreview() = YoinksTheme {
+internal fun SettingsPreview() = YoinksTheme {
     Surface { SettingsScreen(SettingsUi(AppSettings(), ytdlp = YtDlpState("2026.08.19")), previewCallbacks) }
 }

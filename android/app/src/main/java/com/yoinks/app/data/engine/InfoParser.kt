@@ -52,9 +52,13 @@ object InfoParser {
         val videos = formats.filter { it.codec("vcodec") && (it.number("height") ?: 0.0) > 0 }
         val heights = videos.mapNotNull { it.number("height")?.toInt() }.distinct().sortedDescending()
         val options = heights.take(MAX_VIDEO_CHOICES).map { height ->
-            val best = videos.filter { it.number("height")?.toInt() == height }.maxBy { score(it) }
+            // yt-dlp lists formats worst to best, so the last one at this height
+            // is the one "bv*[height=h]" downloads. No size known: show none
+            // rather than the audio track's size alone.
+            val best = videos.last { it.number("height")?.toInt() == height }
             val muxed = best.codec("acodec")
-            val size = (best.size() ?: 0L) + if (muxed) 0L else (audioSize ?: 0L)
+            val videoSize = best.size() ?: 0L
+            val size = if (videoSize > 0) videoSize + (if (muxed) 0L else (audioSize ?: 0L)) else 0L
             FormatOption(MediaKind.VIDEO, "${height}p", height, exact = true, ext = "mp4", sizeBytes = size.takeIf { it > 0 })
         }.toMutableList()
         if (options.isEmpty() && formats.any { it.codec("vcodec") }) {
@@ -69,13 +73,6 @@ object InfoParser {
         listOf(FormatOption(MediaKind.VIDEO, "Best", ext = "mp4")) +
             listOf(1080, 720, 480).map { FormatOption(MediaKind.VIDEO, "${it}p (max)", it, exact = false, ext = "mp4") } +
             FormatOption(MediaKind.AUDIO, "Audio only", ext = settings.audioFormat.ext)
-
-    private fun score(f: JsonObject): Double {
-        var score = f.number("tbr") ?: 0.0
-        if (f.string("ext") == "mp4") score += 10_000
-        if (f.string("vcodec")?.startsWith("avc") == true) score += 5_000
-        return score
-    }
 
     private fun thumbnail(info: JsonObject): String? {
         info.string("thumbnail")?.takeIf { it.startsWith("https://") }?.let { return it }

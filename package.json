@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
+    "dist:win": "electron-builder --win --publish never",
     "extension:install": "node host/install.js",
     "extension:uninstall": "node host/install.js --uninstall"
   },
@@ -18,6 +18,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "ffmpeg-static": "^5.3.0"
   },
   "devDependencies": {
@@ -37,8 +38,14 @@
       "!**/*.map"
     ],
     "extraResources": [
-      { "from": "ffmpeg.exe", "to": "ffmpeg.exe" },
-      { "from": "ffprobe.exe", "to": "ffprobe.exe" }
+      {
+        "from": "ffmpeg.exe",
+        "to": "ffmpeg.exe"
+      },
+      {
+        "from": "ffprobe.exe",
+        "to": "ffprobe.exe"
+      }
     ],
     "directories": {
       "output": "release"
@@ -69,7 +76,14 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "bliper2",
+        "repo": "yoinks-gui-fork"
+      }
+    ]
   },
   "allowScripts": {
     "electron@33.4.11": true,

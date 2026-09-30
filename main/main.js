@@ -12,6 +12,7 @@ const Controller = require('../extension/shared/controller.js')
 const { createLocalBackend } = require('../core/local-backend')
 const store = require('../core/settings-store')
 const files = require('../core/files')
+const updater = require('./updater')
 
 const ROOT = path.join(__dirname, '..')
 const STATE_PATH = path.join(app.getPath('userData'), 'app-state.json')
@@ -108,7 +109,10 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow()
+  updater.start(() => mainWindow)
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

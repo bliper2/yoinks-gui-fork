@@ -222,4 +222,4 @@ private val previewActions = QueueActions({}, {}, {}, {}, {}, {}, {}, {})
 
 @PreviewScreenSizes
 @Composable
-private fun QueuePreview() = YoinksTheme { Surface { QueueScreen(PreviewData.jobs, previewActions) } }
+internal fun QueuePreview() = YoinksTheme { Surface { QueueScreen(PreviewData.jobs, previewActions) } }

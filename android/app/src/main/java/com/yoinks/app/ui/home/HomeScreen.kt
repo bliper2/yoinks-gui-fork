@@ -222,6 +222,6 @@ private fun BatchDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
 
 @PreviewScreenSizes
 @Composable
-private fun HomePreview() = YoinksTheme {
+internal fun HomePreview() = YoinksTheme {
     Surface { HomeScreen(PreviewData.history, {}, {}, {}, {}, {}) }
 }

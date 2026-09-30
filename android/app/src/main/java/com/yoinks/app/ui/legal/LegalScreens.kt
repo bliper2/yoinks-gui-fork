@@ -113,6 +113,6 @@ fun LegalScreen(page: LegalPage, onBack: () -> Unit, onOpen: (LegalPage) -> Unit
 
 @PreviewScreenSizes
 @Composable
-private fun TermsGatePreview() = YoinksTheme {
+internal fun TermsGatePreview() = YoinksTheme {
     Surface { TermsGate(onAccept = {}, terms = "# Terms of use\n\nShort terms text.\n\n- Personal use only.", privacy = "# Privacy\n\nNo tracking.") }
 }
