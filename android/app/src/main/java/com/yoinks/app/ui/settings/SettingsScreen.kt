@@ -66,6 +66,7 @@ import com.yoinks.app.domain.model.AudioFormat
 import com.yoinks.app.domain.model.DefaultFormat
 import com.yoinks.app.domain.model.ShareBehavior
 import com.yoinks.app.domain.model.ThemeMode
+import com.yoinks.app.domain.model.UiStyle
 import com.yoinks.app.ui.components.ColorPickerDialog
 import com.yoinks.app.ui.theme.YoinksTheme
 
@@ -159,6 +160,20 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
         Text("Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
         Column(Modifier.widthIn(max = 840.dp)) {
             SettingsGroup("Look") {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Style", style = MaterialTheme.typography.bodyLarge)
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        UiStyle.entries.forEachIndexed { i, style ->
+                            SegmentedButton(
+                                selected = s.style == style,
+                                onClick = { set { it.copy(style = style) } },
+                                shape = SegmentedButtonDefaults.itemShape(i, UiStyle.entries.size),
+                                icon = {},
+                            ) { Text(style.label, maxLines = 1) }
+                        }
+                    }
+                }
+                SwitchRow("Floating navigation bar", s.floatingNav, { v -> set { it.copy(floatingNav = v) } }, "Show Download, Queue, History and Settings as a floating bar")
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Theme", style = MaterialTheme.typography.bodyLarge)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

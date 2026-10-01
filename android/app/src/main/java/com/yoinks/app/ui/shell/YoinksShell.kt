@@ -1,5 +1,16 @@
 package com.yoinks.app.ui.shell
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import com.yoinks.app.ui.theme.LocalLook
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -113,14 +124,18 @@ fun YoinksShell(
     }
 
     val activeCount = jobs.count { it.phase.isActive || it.phase.isPending }
+    // Settings → Floating navigation bar: a pill over the content replaces
+    // the bottom bar and the rail.
+    val floating = LocalLook.current.floatingNav
 
     UpdatePrompt()
 
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
-            if (widthClass == WindowWidthSizeClass.Compact) {
+            if (widthClass == WindowWidthSizeClass.Compact && !floating) {
                 NavigationBar {
                     Destination.entries.forEach { d ->
                         NavigationBarItem(
@@ -134,11 +149,12 @@ fun YoinksShell(
             }
         },
     ) { padding ->
+        val contentPadding = if (floating) Modifier.padding(bottom = 84.dp) else Modifier
         if (widthClass == WindowWidthSizeClass.Compact) {
-            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) { page(destination) }
+            Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).then(contentPadding)) { page(destination) }
         } else {
-            Row(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-                NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            Row(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).then(contentPadding)) {
+                if (!floating) NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                     Destination.entries.forEach { d ->
                         NavigationRailItem(
                             selected = destination == d,
@@ -157,6 +173,41 @@ fun YoinksShell(
                     Box(Modifier.weight(0.58f).fillMaxHeight()) { page(destination) }
                 } else {
                     Box(Modifier.weight(1f).fillMaxHeight()) { page(destination) }
+                }
+            }
+        }
+    }
+    if (floating) {
+        FloatingNav(destination, activeCount, go, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 12.dp))
+    }
+    }
+}
+
+/** The floating pill: icons, with the label of the current page. */
+@Composable
+internal fun FloatingNav(destination: Destination, activeCount: Int, go: (Destination) -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 3.dp,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Destination.entries.forEach { d ->
+                val selected = d == destination
+                Surface(
+                    onClick = { go(d) },
+                    shape = CircleShape,
+                    color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.semantics { contentDescription = d.label },
+                ) {
+                    Row(Modifier.height(44.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        NavIcon(d, if (d == Destination.QUEUE) activeCount else 0)
+                        if (selected) Text(d.label, style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
         }

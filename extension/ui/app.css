@@ -131,8 +131,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: var(--head-size);
+  font-weight: var(--head-weight);
+  text-shadow: var(--head-glow);
   letter-spacing: -0.01em;
   margin-bottom: 4px;
 }
@@ -693,4 +694,37 @@ body {
   border-radius: 5px;
   background: var(--surface-2);
   color: var(--text);
+}
+
+/* ---------- floating bottom navigation (Settings → Navigation buttons) ---------- */
+
+.nav.nav-floating {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  z-index: 40;
+  transform: translateX(-50%);
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
+  border: var(--line) solid var(--card-border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), var(--card-shadow);
+  backdrop-filter: blur(16px);
+}
+.nav-floating .nav-btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+}
+.nav-floating .nav-btn[aria-current='page'] {
+  background: var(--primary-bg);
+  color: var(--on-accent);
+  box-shadow: var(--primary-shadow);
+}
+.nav-bottom .app-main {
+  padding-bottom: 110px;
+}
+.nav-bottom .toasts {
+  bottom: 76px;
 }

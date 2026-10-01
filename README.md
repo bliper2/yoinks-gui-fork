@@ -38,6 +38,17 @@ The Windows builds are unsigned, so SmartScreen may warn on first run
 <img src="docs/screenshots/desktop-settings.png" width="270" alt="Settings">
 </p>
 
+**Styles** — Settings → Look → Style: Clean (default), Playful, Neon or Classic, each in light and dark
+
+<p><img src="docs/screenshots/desktop-styles.png" width="820" alt="The desktop app in the four styles, dark and light"></p>
+
+**Floating navigation** — Settings → Look → Navigation buttons → Floating bottom (Android: Floating navigation bar)
+
+<p>
+<img src="docs/screenshots/desktop-floating-nav.png" width="270" alt="Desktop app with the floating bottom navigation bar">
+<img src="docs/screenshots/android-floating-nav.png" width="300" alt="Android floating navigation bar in the four styles">
+</p>
+
 **Browser extension** — Yoink buttons on the page
 
 <p>
@@ -189,8 +200,10 @@ player bar (quick download of whatever is playing, on any page), in Bandcamp's s
 - **Queue** — pause, resume, retry, cancel; a set number of downloads at once;
   automatic retries for network errors; notifications when done or failed.
 - **Clear errors** — "This video is age-restricted…" instead of raw yt-dlp output.
-- **Themes** — Light, Dark or System, five accent presets and a custom color;
-  applied instantly and identical in the app and the extension.
+- **Looks** — four styles (Clean, Playful, Neon, Classic), Light, Dark or
+  System, five accent presets and a custom color, and the navigation buttons
+  at the top or as a floating bar at the bottom; applied instantly and the
+  same in the app and the extension (Android has the same styles).
 
 ## Settings
 

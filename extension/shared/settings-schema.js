@@ -51,6 +51,17 @@
     ['light', 'Light'],
     ['dark', 'Dark'],
   ]
+  // Whole-look presets (shapes, surfaces, effects); ui/theme.css has them.
+  const STYLES = [
+    ['clean', 'Clean'],
+    ['playful', 'Playful'],
+    ['neon', 'Neon'],
+    ['classic', 'Classic'],
+  ]
+  const NAV_BARS = [
+    ['top', 'Top'],
+    ['bottom', 'Floating bottom'],
+  ]
   const ACCENTS = [
     ['violet', 'Violet'],
     ['ocean', 'Ocean'],
@@ -87,7 +98,9 @@
     { key: 'ytdlpAutoUpdate', section: 'yt-dlp', type: 'toggle', default: true, label: 'Keep yt-dlp up to date (checks weekly)' },
     { key: 'cookiesFromBrowser', section: 'yt-dlp', type: 'select', options: COOKIE_BROWSERS, default: 'off', label: 'Use browser cookies', help: 'For age-restricted or members-only videos.' },
 
+    { key: 'style', section: 'Look', type: 'segmented', options: STYLES, default: 'clean', label: 'Style' },
     { key: 'theme', section: 'Look', type: 'segmented', options: THEMES, default: 'system', label: 'Theme' },
+    { key: 'navBar', section: 'Look', type: 'segmented', options: NAV_BARS, default: 'top', label: 'Navigation buttons' },
     { key: 'accent', section: 'Look', type: 'accent', options: ACCENTS, default: 'violet', label: 'Accent color' },
     { key: 'customAccent', section: 'Look', type: 'color', default: '#8b6bff', label: 'Custom color', hidden: true },
 

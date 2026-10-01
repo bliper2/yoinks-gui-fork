@@ -42,8 +42,8 @@
   gap: 7px;
   height: var(--control-h);
   padding: 0 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
+  border-radius: var(--btn-radius);
+  border: var(--line) solid transparent;
   font: 600 13px/1 var(--font-ui);
   color: var(--text);
   background: transparent;
@@ -87,9 +87,9 @@
 }
 
 .btn-primary {
-  background: var(--accent-grad);
+  background: var(--primary-bg);
   color: var(--on-accent);
-  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: var(--primary-shadow);
 }
 .btn-primary:hover:not(:disabled) {
   filter: brightness(1.08) saturate(1.05);
@@ -143,8 +143,8 @@
   height: var(--control-h);
   min-width: 0;
   padding: 0 11px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border-radius: var(--field-radius);
+  border: var(--line) solid var(--border);
   background: var(--field-bg);
   color: var(--text);
   font: 13px var(--font-ui);
@@ -158,7 +158,7 @@
 .field:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  box-shadow: var(--field-focus);
 }
 .field[aria-invalid='true'] {
   border-color: var(--danger);
@@ -183,6 +183,7 @@ select.field option {
 }
 textarea.field {
   height: auto;
+  border-radius: var(--radius-md);
   padding: 10px 11px;
   resize: vertical;
   font-family: var(--font-mono);
@@ -321,11 +322,12 @@ textarea.field {
 /* ---------- small pieces ---------- */
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--card-bg);
+  border: var(--line) solid var(--card-border);
   border-radius: var(--radius-lg);
   padding: 16px;
-  backdrop-filter: blur(14px);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(var(--card-blur));
 }
 
 .chip {

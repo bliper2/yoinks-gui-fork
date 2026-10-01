@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The Yoinks bars, centred in the adaptive-icon safe zone. -->
+<!-- The Yoinks mark (docs/logo.svg): a Y that becomes an arrow into a tray. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path android:fillColor="#8B6BFF" android:pathData="M36.4,30h9.6v28.8h-9.6z" />
-    <path android:fillColor="#6F8FF5" android:pathData="M49.2,42.8h9.6v16h-9.6z" />
-    <path android:fillColor="#3FB6EE" android:pathData="M62,30h9.6v28.8h-9.6z" />
-    <path android:fillColor="#22D3EE" android:pathData="M55.6,62h9.6v16h-9.6z" />
+    <path android:pathData="M38.40,33.00 L54.00,49.20 L69.60,33.00" android:strokeColor="#FFFFFFFF" android:strokeWidth="7.20" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M54.00,49.20 V67.20" android:strokeColor="#FFFFFFFF" android:strokeWidth="7.20" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M45.60,59.40 L54.00,67.80 L62.40,59.40" android:strokeColor="#FFFFFFFF" android:strokeWidth="7.20" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M36.00,66.60 V72.60 Q36.00,76.80 40.20,76.80 H67.80 Q72.00,76.80 72.00,72.60 V66.60" android:strokeColor="#FFFFFFFF" android:strokeWidth="7.20" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
 </vector>
