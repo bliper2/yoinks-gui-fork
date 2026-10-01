@@ -11,13 +11,19 @@ const path = require('node:path')
 const HOST_NAME = 'com.yoinks.host'
 // Pinned by the "key" in extension/manifest.json, so it is the same on every machine.
 const EXTENSION_ID = 'ijjoaplmmifaojgihjaefpbobfgfdimp'
+// browser_specific_settings.gecko.id in extension/manifest.json.
+const GECKO_ID = 'yoinks@yoinks.app'
 const MANIFEST_PATH = path.join(__dirname, `${HOST_NAME}.json`)
+// Firefox-family browsers want "allowed_extensions" instead of "allowed_origins".
+const GECKO_MANIFEST_PATH = path.join(__dirname, `${HOST_NAME}.firefox.json`)
 
 const BROWSER_KEYS = [
   'HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts',
   'HKCU\\Software\\Microsoft\\Edge\\NativeMessagingHosts',
   'HKCU\\Software\\BraveSoftware\\Brave-Browser\\NativeMessagingHosts',
 ]
+// Firefox and forks like Waterfox read Mozilla's key; Waterfox's own key too, to be safe.
+const GECKO_KEYS = ['HKCU\\Software\\Mozilla\\NativeMessagingHosts', 'HKCU\\Software\\Waterfox\\NativeMessagingHosts']
 
 function reg(args) {
   const result = spawnSync('reg', args, { encoding: 'utf-8' })
@@ -30,35 +36,32 @@ if (process.platform !== 'win32') {
 }
 
 if (process.argv.includes('--uninstall')) {
-  for (const key of BROWSER_KEYS) reg(['delete', `${key}\\${HOST_NAME}`, '/f'])
+  for (const key of [...BROWSER_KEYS, ...GECKO_KEYS]) reg(['delete', `${key}\\${HOST_NAME}`, '/f'])
   fs.rmSync(MANIFEST_PATH, { force: true })
+  fs.rmSync(GECKO_MANIFEST_PATH, { force: true })
   console.log('Removed the yoinks native host.')
   process.exit(0)
 }
 
-fs.writeFileSync(
-  MANIFEST_PATH,
-  JSON.stringify(
-    {
-      name: HOST_NAME,
-      description: 'yoinks downloader host',
-      path: path.join(__dirname, 'host.bat'),
-      type: 'stdio',
-      allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
-    },
-    null,
-    2,
-  ),
-)
+const hostManifest = {
+  name: HOST_NAME,
+  description: 'yoinks downloader host',
+  path: path.join(__dirname, 'host.bat'),
+  type: 'stdio',
+}
+fs.writeFileSync(MANIFEST_PATH, JSON.stringify({ ...hostManifest, allowed_origins: [`chrome-extension://${EXTENSION_ID}/`] }, null, 2))
+fs.writeFileSync(GECKO_MANIFEST_PATH, JSON.stringify({ ...hostManifest, allowed_extensions: [GECKO_ID] }, null, 2))
 
 let failed = false
-for (const key of BROWSER_KEYS) {
-  if (!reg(['add', `${key}\\${HOST_NAME}`, '/ve', '/t', 'REG_SZ', '/d', MANIFEST_PATH, '/f'])) {
-    console.error(`Could not write ${key}\\${HOST_NAME}`)
-    failed = true
+for (const [keys, manifest] of [[BROWSER_KEYS, MANIFEST_PATH], [GECKO_KEYS, GECKO_MANIFEST_PATH]]) {
+  for (const key of keys) {
+    if (!reg(['add', `${key}\\${HOST_NAME}`, '/ve', '/t', 'REG_SZ', '/d', manifest, '/f'])) {
+      console.error(`Could not write ${key}\\${HOST_NAME}`)
+      failed = true
+    }
   }
 }
 
 if (failed) process.exit(1)
-console.log(`Registered ${HOST_NAME} for Chrome, Edge and Brave.`)
+console.log(`Registered ${HOST_NAME} for Chrome, Edge, Brave, Firefox and Waterfox.`)
 console.log('Now load the extension/ folder in your browser (see README).')
