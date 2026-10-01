@@ -4,6 +4,14 @@ import kotlinx.serialization.Serializable
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+/** Whole-look presets: shapes, surfaces and type (same names as the desktop app). */
+enum class UiStyle(val label: String) {
+    CLEAN("Clean"),
+    PLAYFUL("Playful"),
+    NEON("Neon"),
+    CLASSIC("Classic"),
+}
+
 enum class AccentPreset(val argb: Long, val label: String) {
     VIOLET(0xFF8B6BFF, "Violet"),
     OCEAN(0xFF2F80ED, "Ocean"),
@@ -50,6 +58,8 @@ enum class ShareBehavior(val label: String) {
 @Serializable
 data class AppSettings(
     // Look
+    val style: UiStyle = UiStyle.CLEAN,
+    val floatingNav: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val amoledBlack: Boolean = false,

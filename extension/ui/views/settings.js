@@ -92,7 +92,7 @@
 
     function segmentedField(field) {
       const buttons = field.options.map(([value, text]) =>
-        h('button', { type: 'button', role: 'radio', class: 'segment', 'aria-checked': 'false', dataset: { value }, onclick: () => save(field.key, value) }, icon(THEME_ICONS[value] ?? 'check', { size: 15 }), text),
+        h('button', { type: 'button', role: 'radio', class: 'segment', 'aria-checked': 'false', dataset: { value }, onclick: () => save(field.key, value) }, THEME_ICONS[value] ? icon(THEME_ICONS[value], { size: 15 }) : '', text),
       )
       const control = h('div', { class: 'segmented', role: 'radiogroup' }, buttons)
       control.addEventListener('keydown', event => arrowRadio(event, buttons, b => save(field.key, b.dataset.value)))

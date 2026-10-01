@@ -8,7 +8,16 @@ import com.yoinks.app.ui.queue.QueuePreview
 import com.yoinks.app.ui.settings.SettingsPreview
 import com.yoinks.app.ui.share.MediaSheetPreview
 import com.yoinks.app.ui.share.SpotifySheetPreview
+import com.yoinks.app.domain.model.AppSettings
+import com.yoinks.app.domain.model.UiStyle
+import com.yoinks.app.ui.shell.Destination
+import com.yoinks.app.ui.shell.FloatingNav
 import com.yoinks.app.ui.shell.PhoneShellPreview
+import com.yoinks.app.ui.theme.YoinksTheme
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -34,4 +43,11 @@ class ScreenshotTest {
     @Test fun queue() = shot("android-queue") { QueuePreview() }
     @Test fun history() = shot("android-history") { HistoryPreview() }
     @Test fun settings() = shot("android-settings") { SettingsPreview() }
+    @Test fun floatingNav() = UiStyle.entries.forEach { style ->
+        shot("android-nav-${style.name.lowercase()}") {
+            YoinksTheme(AppSettings(style = style, dynamicColor = false)) {
+                Surface { FloatingNav(Destination.QUEUE, 2, {}, Modifier.padding(16.dp)) }
+            }
+        }
+    }
 }

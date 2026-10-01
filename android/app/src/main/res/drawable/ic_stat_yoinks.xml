@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notification icon: white silhouette of the Yoinks bars. -->
+<!-- Notification icon: white silhouette of the Yoinks mark. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M3.2,0h4.8v14.4h-4.8zM9.6,6.4h4.8v8h-4.8zM16,0h4.8v14.4h-4.8zM12.8,16h4.8v8h-4.8z" />
+    <path android:pathData="M5.43,3.76 L12.00,10.58 L18.57,3.76" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.28" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M12.00,10.58 V18.16" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.28" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M8.46,14.87 L12.00,18.41 L15.54,14.87" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.28" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M4.42,17.91 V20.43 Q4.42,22.20 6.19,22.20 H17.81 Q19.58,22.20 19.58,20.43 V17.91" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.28" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
 </vector>

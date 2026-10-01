@@ -123,10 +123,14 @@
     ])
   }
 
+  // The Yoinks mark (docs/logo.svg): a Y that becomes an arrow into a tray.
   function logo() {
-    return svg('svg', { viewBox: '-3 -3 21 21', class: 'logo', 'aria-hidden': 'true' }, [
+    return svg('svg', { viewBox: '0 0 256 256', class: 'logo', 'aria-hidden': 'true' }, [
       gradientDefs(),
-      ...[[0, 0, 3, 9], [4, 4, 3, 5], [8, 0, 3, 9], [6, 10, 3, 5]].map(([x, y, w, h]) => svg('rect', { x, y, width: w, height: h })),
+      svg('rect', { x: 8, y: 8, width: 240, height: 240, rx: 60 }),
+      ...['M76 58 L128 112 L180 58', 'M128 112 V172', 'M100 146 L128 174 L156 146', 'M68 170 V190 Q68 204 82 204 H174 Q188 204 188 190 V170'].map(d =>
+        svg('path', { d, fill: 'none', stroke: '#fff', 'stroke-width': 24, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
+      ),
     ])
   }
 

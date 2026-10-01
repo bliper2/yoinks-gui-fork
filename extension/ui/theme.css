@@ -1,7 +1,9 @@
 /*
  * Yoinks design tokens: the one theme file shared by the popup, the settings
  * page and the desktop app. Colors are CSS variables; ui/theme.js sets
- * data-theme (light/dark) and the accent variables at runtime.
+ * data-theme (light/dark), data-style (clean/playful/neon/classic) and the
+ * accent variables at runtime. Components only read tokens, so a style is
+ * just a block of overrides at the end of this file.
  */
 
 :root {
@@ -28,6 +30,21 @@
   --control-h-sm: 28px;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* style tokens (values here = the classic look; styles override them) */
+  --btn-radius: var(--radius-sm);
+  --field-radius: var(--radius-sm);
+  --field-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+  --primary-bg: var(--accent-grad);
+  --primary-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+  --card-bg: var(--surface);
+  --card-border: var(--border);
+  --card-shadow: none;
+  --card-blur: 14px;
+  --line: 1px;
+  --head-size: 20px;
+  --head-weight: 700;
+  --head-glow: none;
   color-scheme: dark;
 }
 
@@ -90,3 +107,90 @@
     color-scheme: light;
   }
 }
+
+/* ================= styles ================= */
+
+/* Clean (default): flat, calm, solid accent. */
+:root[data-style='clean'] {
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+  --primary-bg: var(--accent);
+  --primary-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --card-blur: 0px;
+  --bg-mesh-a: transparent;
+  --bg-mesh-b: transparent;
+  --head-size: 19px;
+  --head-weight: 650;
+}
+:root[data-style='clean'][data-theme='dark'] {
+  --bg: #0e1015;
+  --surface: #161920;
+  --surface-2: #1d212a;
+  --surface-solid: #161920;
+  --border: rgba(255, 255, 255, 0.075);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+:root[data-style='clean'][data-theme='light'] {
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface-2: #eef0f4;
+  --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.07), 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* Playful: big rounded shapes, chunky borders, bold type, 3-D buttons. */
+:root[data-style='playful'] {
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --btn-radius: 999px;
+  --field-radius: 999px;
+  --control-h: 38px;
+  --control-h-lg: 46px;
+  --line: 2px;
+  --primary-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, black);
+  --card-shadow: 0 6px 0 color-mix(in srgb, var(--accent) 18%, transparent);
+  --head-size: 23px;
+  --head-weight: 800;
+}
+:root[data-style='playful'][data-theme='dark'] {
+  --bg-mesh-a: color-mix(in srgb, var(--accent) 45%, #0a0d13);
+  --bg-mesh-b: color-mix(in srgb, var(--accent-2) 35%, #0a0d13);
+  --card-border: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+:root[data-style='playful'][data-theme='light'] {
+  --bg: #fbf8ff;
+  --bg-mesh-a: color-mix(in srgb, var(--accent) 24%, #fbf8ff);
+  --bg-mesh-b: color-mix(in srgb, var(--accent-2) 22%, #fbf8ff);
+  --card-border: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+/* Neon: deep black, glowing accent edges and buttons. */
+:root[data-style='neon'] {
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+  --card-border: color-mix(in srgb, var(--accent) 45%, transparent);
+  --card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent), 0 0 28px -8px color-mix(in srgb, var(--accent) 65%, transparent);
+  --primary-shadow: 0 0 22px -2px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 2px var(--accent);
+  --head-weight: 700;
+  --head-glow: 0 0 18px color-mix(in srgb, var(--accent) 60%, transparent);
+  --field-focus: 0 0 0 1px var(--accent), 0 0 18px -2px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+:root[data-style='neon'][data-theme='dark'] {
+  --bg: #04050a;
+  --bg-mesh-a: color-mix(in srgb, var(--accent) 22%, #04050a);
+  --bg-mesh-b: color-mix(in srgb, var(--accent-2) 16%, #04050a);
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-solid: #0b0d14;
+  --field-bg: rgba(0, 0, 0, 0.55);
+  --accent-ink: color-mix(in srgb, var(--accent) 55%, white);
+}
+:root[data-style='neon'][data-theme='light'] {
+  --bg: #f2f3fa;
+  --card-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent), 0 0 24px -10px color-mix(in srgb, var(--accent) 55%, transparent);
+  --head-glow: none;
+}
+
+/* Classic: the original glassy look (uses the defaults above). */

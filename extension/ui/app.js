@@ -54,6 +54,18 @@
     nav,
     windowControls,
   )
+  // Navigation in the header, or as a floating pill at the bottom. It moves
+  // out of the header then, because the header's blur would pin a fixed
+  // element to the header instead of the window.
+  function placeNav(where) {
+    const bottom = where === 'bottom'
+    if (bottom === nav.classList.contains('nav-floating')) return
+    nav.classList.toggle('nav-floating', bottom)
+    document.body.classList.toggle('nav-bottom', bottom)
+    if (bottom) document.body.append(nav)
+    else header.insertBefore(nav, windowControls)
+  }
+
   const banner = h('div', { class: 'banner', role: 'alert', hidden: true })
   const main = h('main', { class: 'app-main', id: 'main' })
   document.body.append(header, banner, main)
@@ -83,11 +95,12 @@
     const firstTerms = needsTerms(lastView)
     lastView = view
 
-    const look = `${view.settings.theme}|${view.settings.accent}|${view.settings.customAccent}`
+    const look = `${view.settings.style}|${view.settings.theme}|${view.settings.accent}|${view.settings.customAccent}`
     if (look !== lastLook) {
       lastLook = look
       root.YoinksTheme.apply(view.settings)
     }
+    placeNav(view.settings.navBar)
 
     const locked = needsTerms(view)
     nav.hidden = Boolean(locked)

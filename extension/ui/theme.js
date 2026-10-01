@@ -1,5 +1,5 @@
 /*
- * Applies the saved theme (light / dark / system) and accent color to the
+ * Applies the saved style, theme (light / dark / system) and accent color to the
  * page instantly. Used by the popup, settings page and desktop app.
  * The last applied look is kept in localStorage so the next page load
  * paints in the right colors before settings arrive.
@@ -72,13 +72,14 @@
     return media?.matches ? 'light' : 'dark'
   }
 
-  /** Apply { theme, accent, customAccent } to this document. */
+  /** Apply { style, theme, accent, customAccent } to this document. */
   function apply(settings) {
     if (!settings) return
-    current = { theme: settings.theme ?? 'system', accent: settings.accent ?? 'violet', customAccent: settings.customAccent }
+    current = { style: settings.style ?? 'clean', theme: settings.theme ?? 'system', accent: settings.accent ?? 'violet', customAccent: settings.customAccent }
     const [a, b] = accentPair(current)
     const el = document.documentElement
     el.dataset.theme = resolvedTheme(current.theme)
+    el.dataset.style = current.style
     el.style.setProperty('--accent', a)
     el.style.setProperty('--accent-2', b)
     el.style.setProperty('--on-accent', onColor(a))
