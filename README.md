@@ -164,6 +164,19 @@ The extension zip from Releases contains the same folders: unzip it, then run
 the steps above inside the unzipped folder (Node.js is still needed for the
 helper, and `npm install` first).
 
+### Firefox / Waterfox
+
+The same extension works in Firefox 140+ and Waterfox. `npm run extension:install`
+also registers the helper for them. Then:
+
+- **Waterfox:** open `Yoinks-extension-<version>.xpi` (from Releases) with
+  Waterfox, or drag it into a window, and click **Add**. Waterfox accepts
+  unsigned add-ons, so it stays installed.
+- **Firefox:** release Firefox only installs Mozilla-signed add-ons. Use
+  `about:debugging` → This Firefox → **Load Temporary Add-on…** and pick
+  `extension/manifest.json` (gone after a restart), or Firefox Developer
+  Edition / Nightly with `xpinstall.signatures.required` set to `false`.
+
 ## Android app
 
 A separate native app (Kotlin, Jetpack Compose) in `android/`: share a link

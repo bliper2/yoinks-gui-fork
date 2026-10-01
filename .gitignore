@@ -10,3 +10,4 @@ ffplay.exe
 
 # Written by "npm run extension:install" with this machine's path
 host/com.yoinks.host.json
+host/com.yoinks.host.firefox.json

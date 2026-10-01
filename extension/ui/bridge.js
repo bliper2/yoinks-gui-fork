@@ -36,7 +36,8 @@
         const commands = await chrome.commands.getAll()
         return commands.find(c => c.name === '_execute_action')?.shortcut || null
       },
-      openShortcutSettings: () => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }),
+      // Firefox/Waterfox can't open about: pages from tabs.create; it has its own call.
+      openShortcutSettings: () => (chrome.commands.openShortcutSettings ? chrome.commands.openShortcutSettings() : chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })),
       async activeTab() {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
         return tab ?? null

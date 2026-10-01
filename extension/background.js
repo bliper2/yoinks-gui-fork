@@ -6,7 +6,9 @@
 // alive. Pages (popup, settings tab), the in-page buttons and the context
 // menu only send commands here.
 
-importScripts('shared/settings-schema.js', 'shared/filename-template.js', 'shared/formats.js', 'shared/sites.js', 'shared/controller.js')
+// Chrome/Brave/Edge run this as a service worker and load the shared scripts
+// here; Firefox/Waterfox load them first from manifest background.scripts.
+if (typeof importScripts === 'function') importScripts('shared/settings-schema.js', 'shared/filename-template.js', 'shared/formats.js', 'shared/sites.js', 'shared/controller.js')
 
 const HOST_NAME = 'com.yoinks.host'
 
@@ -66,7 +68,8 @@ function notify({ id, title, message, target }) {
     iconUrl: 'icons/icon128.png',
     title,
     message,
-    ...(target ? { buttons: [{ title: 'Show in folder' }] } : {}),
+    // Firefox/Waterfox have no notification buttons; clicking the notification does the same.
+    ...(target && chrome.notifications.onButtonClicked ? { buttons: [{ title: 'Show in folder' }] } : {}),
   })
 }
 
@@ -79,7 +82,7 @@ function onNotification(id) {
   else openPopup()
 }
 chrome.notifications.onClicked.addListener(onNotification)
-chrome.notifications.onButtonClicked.addListener(onNotification)
+chrome.notifications.onButtonClicked?.addListener(onNotification)
 
 // ---------- UI pages ----------
 
