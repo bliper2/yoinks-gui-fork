@@ -10,6 +10,11 @@ Built on [yoinks](https://github.com/pablostanley/yoinks), with
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) doing the downloading and
 [ffmpeg](https://ffmpeg.org) the converting. No ads, no tracking, no accounts.
 
+[![Discord](https://img.shields.io/discord/1555524317859676172?label=Yoink%20Community&logo=discord&logoColor=white&color=5865F2)](https://discord.gg/yEF99JeG9b)
+[![Latest release](https://img.shields.io/github/v/release/bliper2/yoinks-gui-fork?label=release)](https://github.com/bliper2/yoinks-gui-fork/releases/latest)
+
+**Need help, found a bug or have an idea?** Join the [Yoink Community on Discord](https://discord.gg/yEF99JeG9b), or open an [issue](https://github.com/bliper2/yoinks-gui-fork/issues).
+
 ## Downloads
 
 Everything is on the [Releases](../../releases) page:
@@ -275,6 +280,11 @@ browser only loads files from the extension folder; the desktop app and the
 helper load the same files from there.
 
 No frameworks, no bundler: edit and reload.
+
+## Support
+
+- **Discord:** [Yoink Community](https://discord.gg/yEF99JeG9b) for help, update announcements and ideas.
+- **Bugs and feature requests:** [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues). Tell us the app (Windows, extension or Android), its version and the link that failed.
 
 ## Fair use
 

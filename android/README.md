@@ -144,6 +144,10 @@ installed app. Publishing steps: see the main README, "Publishing a new version"
 main screens from their preview data (Robolectric + Roborazzi, no phone) to
 `app/build/screenshots/`.
 
+## Support
+
+Help, bugs and ideas: [Yoink Community on Discord](https://discord.gg/yEF99JeG9b) or [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues).
+
 ## License
 
 GPL-3.0 (Yoinks for Android includes youtubedl-android, which is GPL-3.0).
