@@ -153,12 +153,28 @@ async function updateIsDue() {
   }
 }
 
+// A failed update (offline, GitHub down) must not wait a whole week for the
+// next try: age the stamp so the update is due again in an hour.
+async function retrySoon() {
+  const when = new Date(Date.now() - UPDATE_EVERY_MS + 60 * 60 * 1000)
+  await fs.utimes(UPDATE_STAMP, when, when).catch(() => {})
+}
+
 async function updateManaged(signal) {
   // Stamp first so parallel runs don't all try to replace the exe.
   await fs.mkdir(YOINKS_DIR, { recursive: true })
   await fs.writeFile(UPDATE_STAMP, '')
-  const result = await run(LOCAL_YTDLP, ['-U'], { signal, timeout: 180_000 })
-  if (result.code !== 0) throw fromYtdlp(result.stderr || result.stdout, 'yt-dlp could not update itself.')
+  let result
+  try {
+    result = await run(LOCAL_YTDLP, ['-U'], { signal, timeout: 180_000 })
+  } catch (err) {
+    await retrySoon()
+    throw err
+  }
+  if (result.code !== 0) {
+    await retrySoon()
+    throw fromYtdlp(result.stderr || result.stdout, 'yt-dlp could not update itself.')
+  }
   return result.stdout
 }
 

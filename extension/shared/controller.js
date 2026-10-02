@@ -257,6 +257,12 @@
         case 'done':
           return finish(job, message)
         case 'paused':
+          // Cancel arrived after Pause: the session answers "paused" (the first
+          // abort wins), but the user asked for the job to go.
+          if (job.phase === 'cancelling') {
+            removeJob(job)
+            return pump()
+          }
           job.phase = 'paused'
           jobChanged(job)
           return pump()
@@ -388,8 +394,16 @@
 
     // ---------- commands ----------
 
+    // Links pasted from chat or a sentence often carry the punctuation after
+    // them: "see https://youtu.be/x, or (https://youtu.be/y)."
+    function trimLink(link) {
+      let url = link.replace(/[.,;:!?'"\]}]+$/, '')
+      while (url.endsWith(')') && (url.match(/\(/g) ?? []).length < (url.match(/\)/g) ?? []).length) url = url.slice(0, -1).replace(/[.,;:!?'"\]}]+$/, '')
+      return url
+    }
+
     function urlsFrom(text) {
-      return [...new Set(String(text ?? '').match(/https?:\/\/[^\s<>"']+/g) ?? [])].slice(0, 500)
+      return [...new Set((String(text ?? '').match(/https?:\/\/[^\s<>"']+/g) ?? []).map(trimLink).filter(Boolean))].slice(0, 500)
     }
 
     async function request(message, onReply) {

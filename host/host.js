@@ -27,6 +27,12 @@ function send(message) {
 
 const session = new Session(send)
 
+// The browser went away while we were writing: nothing left to do.
+process.stdout.on('error', () => {
+  session.close()
+  process.exit(0)
+})
+
 let pending = Buffer.alloc(0)
 process.stdin.on('data', chunk => {
   pending = Buffer.concat([pending, chunk])

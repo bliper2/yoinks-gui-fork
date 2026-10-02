@@ -28,6 +28,13 @@ const Schema = require('../extension/shared/settings-schema.js')
 const Sites = require('../extension/shared/sites.js')
 const Errors = require('../extension/shared/errors.js')
 
+// An old yt-dlp cannot read a site that changed: it says "unable to extract",
+// HTTP 403, or (Instagram) "login required". Update it once and try again;
+// a really private post fails the same way the second time.
+const RETRY_AFTER_UPDATE = new Set(['outdated', 'forbidden', 'login'])
+const AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000
+let lastAutoUpdate = 0
+
 class Session {
   /**
    * @param {(message: object) => void} send
@@ -121,6 +128,23 @@ class Session {
     return this.bins
   }
 
+  /** Run `step`; if yt-dlp looks out of date, update it (when allowed) and run `step` once more. */
+  async retryWithUpdate(settings, step) {
+    try {
+      return await step()
+    } catch (err) {
+      if (!RETRY_AFTER_UPDATE.has(err?.code) || !settings.ytdlpAutoUpdate) throw err
+      if (Date.now() - lastAutoUpdate < AUTO_UPDATE_EVERY_MS) throw err
+      lastAutoUpdate = Date.now()
+      const before = await ytdlp.versionInfo()
+      if (!before.version || !before.managed) throw err // a system yt-dlp is not ours to update
+      this.send({ type: 'status', message: 'Updating yt-dlp…' })
+      const after = await ytdlp.updateNow().catch(() => null)
+      if (!after || after.version === before.version) throw err
+      return step()
+    }
+  }
+
   /** Run `work` with a fresh abort controller; turn pause/cancel into replies. */
   async withAbort(work) {
     const controller = (this.abort = new AbortController())
@@ -153,7 +177,7 @@ class Session {
     await this.withAbort(async signal => {
       const { ytdlp: bin } = await this.binaries(signal, settings)
       this.send({ type: 'status', message: playlist ? 'Reading playlist…' : 'Looking up video…' })
-      const { info, infoJsonPath } = await ytdlp.probe(bin, url, signal, { playlist, settings })
+      const { info, infoJsonPath } = await this.retryWithUpdate(settings, () => ytdlp.probe(bin, url, signal, { playlist, settings }))
       this.track(infoJsonPath)
       const isPlaylist = info._type === 'playlist'
       const choices = ytdlp.buildChoices(info, { audioFormat: settings.audioFormat })
@@ -225,10 +249,12 @@ class Session {
 
     await this.withAbort(async signal => {
       const bins = await this.binaries(signal, settings)
-      const filepath = await ytdlp.download(
-        { ytdlp: bins.ytdlp, ffmpeg: bins.ffmpeg, url: probed.url, infoJsonPath: probed.infoJsonPath, playlist: probed.playlist, args },
-        this.progressHandlers(),
-        signal,
+      const filepath = await this.retryWithUpdate(settings, () =>
+        ytdlp.download(
+          { ytdlp: bins.ytdlp, ffmpeg: bins.ffmpeg, url: probed.url, infoJsonPath: probed.infoJsonPath, playlist: probed.playlist, args },
+          this.progressHandlers(),
+          signal,
+        ),
       )
       this.send({ type: 'done', filepath, folder: probed.playlist && settings.playlistFolder ? path.dirname(filepath) : null })
     })
