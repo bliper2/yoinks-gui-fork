@@ -10,7 +10,7 @@ Built on [yoinks](https://github.com/pablostanley/yoinks), with
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) doing the downloading and
 [ffmpeg](https://ffmpeg.org) the converting. No ads, no tracking, no accounts.
 
-[![Discord](https://img.shields.io/discord/1555524317859676172?label=Yoink%20Community&logo=discord&logoColor=white&color=5865F2)](https://discord.gg/yEF99JeG9b)
+[![Discord](https://img.shields.io/badge/Discord-Yoink%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/yEF99JeG9b)
 [![Latest release](https://img.shields.io/github/v/release/bliper2/yoinks-gui-fork?label=release)](https://github.com/bliper2/yoinks-gui-fork/releases/latest)
 
 **Need help, found a bug or have an idea?** Join the [Yoink Community on Discord](https://discord.gg/yEF99JeG9b), or open an [issue](https://github.com/bliper2/yoinks-gui-fork/issues).
