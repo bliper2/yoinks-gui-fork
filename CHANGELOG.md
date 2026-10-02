@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.1
+
+- Only one Yoinks window runs at a time. Opening it a second time brings the first one to the front, instead of starting a second queue that overwrote the first one's history.
+- Cancelling a download right after pausing it no longer leaves it stuck as paused.
+- Links followed by punctuation, such as a comma or a closing bracket, now work when you paste them or use the right-click menu.
+- yt-dlp updates itself again an hour after a failed update, instead of waiting a week.
+- Windows and extension: when a site changes and yt-dlp can no longer read it, Yoinks now updates yt-dlp and tries once more by itself (if automatic updates are on).
+- Spotify: if every search on YouTube Music fails, Yoinks shows the real error instead of "no matches".
+- Android: a download that failed instantly could block a download slot until the app was restarted. Fixed.
+- Android: if every song of a Spotify download fails, the real reason is shown instead of "no file was produced".
+
 ## 2.1.0
 
 - New logo, used everywhere: Windows app and installer, browser extension, the Yoink button on pages, and the Android launcher and notifications.
