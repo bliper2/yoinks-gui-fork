@@ -109,6 +109,8 @@ async function findMatches(bin, tracks, { signal, settings, onProgress = () => {
   const results = new Array(tracks.length)
   let next = 0
   let done = 0
+  let failed = 0
+  let firstError = null
   const limit = tracks.length === 1 ? 5 : 3
   async function worker() {
     while (next < tracks.length) {
@@ -119,12 +121,16 @@ async function findMatches(bin, tracks, { signal, settings, onProgress = () => {
         candidates = await ytdlp.searchMusic(bin, `${track.artists[0] ?? ''} ${track.title}`.trim(), { limit, signal, settings })
       } catch (err) {
         if (signal?.aborted) throw err
+        failed++
+        firstError ??= err
       }
       results[i] = Match.rank(track, candidates)
       onProgress(++done, tracks.length)
     }
   }
   await Promise.all(Array.from({ length: Math.min(SEARCH_PARALLEL, tracks.length) }, worker))
+  // Every search failing (offline, yt-dlp broken) is an error, not "no matches".
+  if (failed === tracks.length && firstError) throw firstError
   return results
 }
 

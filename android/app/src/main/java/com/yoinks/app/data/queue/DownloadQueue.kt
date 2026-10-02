@@ -20,6 +20,7 @@ import com.yoinks.app.service.DownloadNotifications
 import com.yoinks.app.service.DownloadServiceLauncher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -153,7 +154,11 @@ class DownloadQueue @Inject constructor(
 
     private fun start(job: DownloadJob) {
         update(job.id) { it.copy(phase = JobPhase.PREPARING, status = "Starting…", error = null, progress = null) }
-        running[job.id] = appScope.launch(Dispatchers.IO) { run(job) }
+        // Registered before it starts: a job that fails instantly must not be
+        // removed from `running` before it was added (a slot would leak forever).
+        val task = appScope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) { run(job) }
+        running[job.id] = task
+        task.start()
     }
 
     private suspend fun run(job: DownloadJob) {
@@ -166,13 +171,17 @@ class DownloadQueue @Inject constructor(
             }
             val picks = job.request.spotify
             val files = if (picks != null) {
-                picks.flatMapIndexed { n, pick ->
+                var firstFailure: YoinksException? = null
+                val done = picks.flatMapIndexed { n, pick ->
                     val itemProgress = { p: EngineProgress -> onProgress(p.copy(item = ItemProgress(n + 1, picks.size))) }
                     val detailed = if (pick.cover == null) spotify.trackDetails(pick.track.id).let { (cover, year) -> pick.copy(cover = cover, year = pick.year ?: year) } else pick
                     runCatching { engine.downloadSpotify(detailed, settings, dir, job.id, itemProgress) }
-                        .onFailure { if (it !is YoinksException) throw it } // stop/cancel propagate; one bad song doesn't
+                        .onFailure { if (it !is YoinksException) throw it else if (firstFailure == null) firstFailure = it } // stop/cancel propagate; one bad song doesn't
                         .getOrDefault(emptyList())
                 }.distinct()
+                // Every song failed: show why, not "no file was produced".
+                if (done.isEmpty()) firstFailure?.let { throw it }
+                done
             } else {
                 engine.download(job.request, settings, dir, job.id, onProgress)
             }

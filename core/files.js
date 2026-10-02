@@ -72,6 +72,8 @@ function pickFolder(current) {
     })
     let out = ''
     let err = ''
+    child.stdout.setEncoding('utf8')
+    child.stderr.setEncoding('utf8')
     child.stdout.on('data', chunk => (out += chunk))
     child.stderr.on('data', chunk => (err += chunk))
     child.on('error', error => reject(new YoinksError({ code: 'picker', message: 'Could not open the folder picker.', detail: error.message })))

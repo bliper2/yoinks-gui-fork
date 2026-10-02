@@ -127,10 +127,22 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(() => {
-  createWindow()
-  updater.start(() => mainWindow)
-})
+// A second copy would run its own queue and overwrite this one's history:
+// bring the open window to the front instead.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+  app.whenReady().then(() => {
+    createWindow()
+    updater.start(() => mainWindow)
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
