@@ -1,6 +1,6 @@
 {
   "name": "yoinks-gui",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Save videos and music from YouTube, YouTube Music, Spotify (via YouTube Music), SoundCloud, Bandcamp and 1,800+ sites. Desktop app + browser extension, built on yt-dlp.",
   "main": "main/main.js",
   "author": "mrkraps",
