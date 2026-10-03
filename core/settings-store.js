@@ -9,7 +9,9 @@ const path = require('node:path')
 
 const Schema = require('../extension/shared/settings-schema.js')
 
-const APP_DATA = process.env.APPDATA ?? path.join(os.homedir(), process.platform === 'darwin' ? 'Library/Application Support' : '.config')
+const APP_DATA =
+  process.env.APPDATA ??
+  (process.platform === 'darwin' ? path.join(os.homedir(), 'Library/Application Support') : process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'))
 const SETTINGS_PATH = path.join(APP_DATA, 'yoinks-gui', 'settings.json')
 const DEFAULT_OUT_DIR = path.join(os.homedir(), 'Downloads')
 

@@ -55,6 +55,7 @@
     <nav>
       <a href="#features">Features</a>
       <a href="#screens">Screenshots</a>
+      <a href="changelog.html">Changelog</a>
       <a href="https://github.com/bliper2/yoinks-gui-fork">GitHub</a>
       <a href="https://discord.gg/yEF99JeG9b">Discord</a>
     </nav>
@@ -63,10 +64,10 @@
   <div class="hero">
     <img class="logo" src="logo.svg" alt="Yoinks logo">
     <h1>Save videos and music from almost anywhere</h1>
-    <p>YouTube, TikTok, Instagram, SoundCloud, X and over 1,800 other sites, plus Spotify links. A Windows app, a browser extension and an Android app. Free, no ads, no tracking, no accounts.</p>
+    <p>YouTube, TikTok, Instagram, SoundCloud, X and over 1,800 other sites, plus Spotify links. A Windows and Linux app, a browser extension and an Android app. Free, no ads, no tracking, no accounts.</p>
     <div class="buttons">
       <a class="btn primary" id="main-download" href="https://github.com/bliper2/yoinks-gui-fork/releases/latest"><b>Download</b><small id="main-note">Latest version</small></a>
-      <a class="btn" id="alt-download" href="https://github.com/bliper2/yoinks-gui-fork/releases/latest"><b>All downloads</b><small>Windows, extension, Android</small></a>
+      <a class="btn" id="alt-download" href="https://github.com/bliper2/yoinks-gui-fork/releases/latest"><b>All downloads</b><small>Windows, Linux, extension, Android</small></a>
     </div>
     <p class="note" id="version-note">Windows builds are not code-signed yet: if SmartScreen warns, choose More info, then Run anyway.</p>
   </div>
@@ -81,7 +82,7 @@
       <div class="card"><h3>On your phone</h3><p>Share a link from TikTok, Instagram or YouTube to Yoinks and it downloads in the background, with a quick tile for the link you just copied.</p></div>
       <div class="card"><h3>Private by design</h3><p>No servers, no tracking. It only talks to the sites you download from and to GitHub for updates. <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/SECURITY.md">How it stays safe</a>.</p></div>
       <div class="card"><h3>Looks the way you want</h3><p>Four styles (Clean, Playful, Neon, Classic), light or dark, your accent color and a floating navigation bar.</p></div>
-      <div class="card"><h3>Convert your own files</h3><p>On Windows, drop a video or audio file and turn it into MP3, M4A, FLAC, Opus or MP4.</p></div>
+      <div class="card"><h3>Convert your own files</h3><p>On Windows and Linux, drop a video or audio file and turn it into MP3, M4A, FLAC, Opus or MP4.</p></div>
       <div class="card"><h3>Keeps itself working</h3><p>yt-dlp and the apps update themselves, and a health check tells you what is wrong if something stops.</p></div>
     </div>
   </section>
@@ -100,7 +101,7 @@
 
   <footer>
     <a href="https://github.com/bliper2/yoinks-gui-fork/releases/latest">Releases</a>
-    <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/CHANGELOG.md">Changelog</a>
+    <a href="changelog.html">Changelog</a>
     <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/docs/KNOWN-ISSUES.md">Help</a>
     <a href="https://discord.gg/yEF99JeG9b">Discord</a>
     <p>Only download what you have the right to keep. Built on yt-dlp and ffmpeg. Windows app and extension: MIT. Android app: GPL-3.0.</p>
@@ -118,12 +119,16 @@
     const ua = navigator.userAgent
     const android = /Android/i.test(ua)
     const windows = /Windows/i.test(ua)
+    const linux = /Linux/i.test(ua) && !android
     const main = document.getElementById('main-download')
     const note = document.getElementById('main-note')
     if (android) {
       const arm64 = /arm64|aarch64/i.test(ua) || !/armv7|armeabi/i.test(ua)
       const url = find(arm64 ? /android-.*arm64-v8a\.apk$/ : /android-.*armeabi-v7a\.apk$/) || find(/android-.*universal\.apk$/)
       if (url) { main.href = url; main.querySelector('b').textContent = 'Download for Android'; note.textContent = `Version ${version}, an APK file` }
+    } else if (linux) {
+      const url = find(/linux-x86_64\.AppImage$/)
+      if (url) { main.href = url; main.querySelector('b').textContent = 'Download for Linux'; note.textContent = `Version ${version}, AppImage (also .deb and .rpm)` }
     } else if (windows) {
       const url = find(/x64-setup\.exe$/)
       if (url) { main.href = url; main.querySelector('b').textContent = 'Download for Windows'; note.textContent = `Version ${version}, installer` }

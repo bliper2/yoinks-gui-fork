@@ -1,0 +1,126 @@
+<!doctype html>
+<!-- Generated from CHANGELOG.md by "npm run sync". Do not edit by hand. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yoinks changelog</title>
+<meta name="description" content="What changed in each version of Yoinks.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #f6f7fb; --card: #ffffff; --text: #141925; --muted: #525c70; --border: rgba(15, 23, 42, .12); --accent: #8b6bff; --accent2: #22d3ee; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1015; --card: #161920; --text: #e8edf4; --muted: #9aa3b5; --border: rgba(255, 255, 255, .1); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 60px; }
+  header { padding: 18px 0; display: flex; align-items: center; gap: 12px; }
+  header img { width: 36px; height: 36px; }
+  header strong { font-size: 20px; }
+  header nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  header nav a { text-decoration: none; }
+  header nav a:hover { color: var(--text); }
+  h1 { font-size: clamp(28px, 5vw, 40px); margin: 24px 0 6px; letter-spacing: -.02em; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .release { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+  .release h2 { margin: 0 0 8px; font-size: 22px; }
+  .latest { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: #fff; background: linear-gradient(120deg, var(--accent), var(--accent2)); vertical-align: middle; }
+  .release ul { margin: 0; padding-left: 20px; }
+  .release li { margin: 6px 0; }
+  code { background: rgba(127, 127, 127, .15); padding: 1px 5px; border-radius: 5px; font-size: .92em; }
+  footer { color: var(--muted); font-size: 14px; text-align: center; padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="logo.svg" alt="">
+    <strong>Yoinks</strong>
+    <nav>
+      <a href="./">Home</a>
+      <a href="https://github.com/bliper2/yoinks-gui-fork/releases/latest">Download</a>
+      <a href="https://github.com/bliper2/yoinks-gui-fork">GitHub</a>
+      <a href="https://discord.gg/yEF99JeG9b">Discord</a>
+    </nav>
+  </header>
+  <main>
+    <h1>Changelog</h1>
+    <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v2.2.0">
+      <h2>2.2.0 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>Type words instead of a link to search YouTube (Windows, extension, Android).</li>
+        <li>Playlists: tick the videos you want before downloading.</li>
+        <li>Settings has a health check for yt-dlp, ffmpeg, folders, storage and connection, with a button to copy the results.</li>
+        <li>Errors have a &quot;Copy details&quot; button for asking for help on Discord or GitHub.</li>
+        <li>Presets: save a combination like &quot;Music FLAC&quot; and pick it with one click (Windows, extension).</li>
+        <li>The format list can remember your quality for each website.</li>
+        <li>Windows: convert files on your PC to MP3, M4A, FLAC, Opus or MP4. Drop them on the window or use Batch.</li>
+        <li>Only start downloads between set times (Windows, Android). Android can also wait on low battery or Data Saver.</li>
+        <li>Sort files into folders by uploader or website, and split videos with chapters into one file per chapter.</li>
+        <li>Extension: right-click &quot;Yoink all videos on this page&quot;. The button also appears on Reddit, Facebook, Dailymotion, Streamable and Rumble.</li>
+        <li>The Windows installer sets up the browser helper itself, so Node.js is not needed. Settings shows the extension folder to load.</li>
+        <li>Windows asks before closing while downloads run, can offer links you copy, accepts dropped links, and the portable app downloads its own updates.</li>
+        <li>Android: &quot;Yoink copied link&quot; tile and &quot;Paste link&quot; shortcut, pictures and a Share button in notifications.</li>
+        <li>A &quot;What's new&quot; screen appears after each update (Windows, Android).</li>
+        <li>Instagram posts that ask for a login are now retried later instead of failing at once.</li>
+      </ul>
+    </section>
+    <section class="release" id="v2.1.1">
+      <h2>2.1.1</h2>
+      <ul>
+        <li>Only one Yoinks window runs at a time. Opening it a second time brings the first one to the front, instead of starting a second queue that overwrote the first one's history.</li>
+        <li>Cancelling a download right after pausing it no longer leaves it stuck as paused.</li>
+        <li>Links followed by punctuation, such as a comma or a closing bracket, now work when you paste them or use the right-click menu.</li>
+        <li>yt-dlp updates itself again an hour after a failed update, instead of waiting a week.</li>
+        <li>Windows and extension: when a site changes and yt-dlp can no longer read it, Yoinks now updates yt-dlp and tries once more by itself (if automatic updates are on).</li>
+        <li>Spotify: if every search on YouTube Music fails, Yoinks shows the real error instead of &quot;no matches&quot;.</li>
+        <li>Android: a download that failed instantly could block a download slot until the app was restarted. Fixed.</li>
+        <li>Android: if every song of a Spotify download fails, the real reason is shown instead of &quot;no file was produced&quot;.</li>
+      </ul>
+    </section>
+    <section class="release" id="v2.1.0">
+      <h2>2.1.0</h2>
+      <ul>
+        <li>New logo, used everywhere: Windows app and installer, browser extension, the Yoink button on pages, and the Android launcher and notifications.</li>
+        <li>Four styles in Settings: Clean (the new default), Playful, Neon and Classic. Available on Windows, in the extension and on Android.</li>
+        <li>The navigation buttons can be moved into a floating bar at the bottom of the window.</li>
+        <li>Pinned Yoinks and shortcuts on Windows now show the Yoinks icon instead of the Electron one.</li>
+        <li>The extension now works in Firefox 140+ and Waterfox. Install the .xpi file.</li>
+        <li>Fixed: changing only the style didn't apply until another look setting changed.</li>
+      </ul>
+    </section>
+    <section class="release" id="v2.0.2">
+      <h2>2.0.2</h2>
+      <ul>
+        <li>The portable exe can be pinned to the taskbar. Before, the pin pointed at a temporary copy and broke as soon as Yoinks closed.</li>
+      </ul>
+    </section>
+    <section class="release" id="v2.0.1">
+      <h2>2.0.1</h2>
+      <ul>
+        <li>Android: the yt-dlp built into the app was months old, which broke TikTok (&quot;Unable to extract webpage video data&quot;) and made public Instagram reels ask for cookies. The app now updates yt-dlp on first start and retries once after updating when a lookup fails.</li>
+        <li>Instagram posts that really need a login now say so plainly, without asking you to import cookies.</li>
+        <li>The Yoink button now shows on Instagram reel pages opened from a profile (/username/reel/...).</li>
+        <li>Clearer error messages when a site changes and yt-dlp can't read it yet.</li>
+      </ul>
+    </section>
+    <section class="release" id="v2.0.0">
+      <h2>2.0.0</h2>
+      <ul>
+        <li>First release of the new Yoinks: a Windows app, a browser extension for Brave, Chrome and Edge, and an Android app, all built on yt-dlp and ffmpeg.</li>
+        <li>Downloads from YouTube, YouTube Music, TikTok, Instagram, SoundCloud, Bandcamp, X, Vimeo, Twitch and over 1,800 other sites.</li>
+        <li>Spotify links are matched on YouTube Music and tagged with the Spotify title, artist, album and cover.</li>
+        <li>Yoink buttons right on YouTube, YouTube Music, SoundCloud, TikTok and more, including &quot;Yoink all&quot; for playlists.</li>
+        <li>Download queue with pause, resume, retries, parallel downloads and notifications.</li>
+        <li>The Windows and Android apps update themselves from GitHub Releases.</li>
+        <li>File sizes now match the quality you pick (before, every quality showed the same size).</li>
+        <li>Cancelling or pausing a download on Windows now stops it completely.</li>
+        <li>Fixed Arabic and other non-Latin file names on Windows.</li>
+      </ul>
+    </section>
+  </main>
+  <footer>Also posted in the <a href="https://discord.gg/yEF99JeG9b">Discord</a> and on each <a href="https://github.com/bliper2/yoinks-gui-fork/releases">GitHub release</a>.</footer>
+</div>
+</body>
+</html>

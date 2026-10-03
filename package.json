@@ -16,7 +16,8 @@
     "test": "node --test",
     "sync": "node scripts/sync-changelog.js",
     "package:extension": "node scripts/package-extension.js",
-    "announce": "node scripts/discord-announce.js"
+    "announce": "node scripts/discord-announce.js",
+    "dist:linux": "npm run sync && electron-builder --linux --publish never"
   },
   "engines": {
     "node": ">=18"
@@ -47,14 +48,6 @@
     ],
     "extraResources": [
       {
-        "from": "ffmpeg.exe",
-        "to": "ffmpeg.exe"
-      },
-      {
-        "from": "ffprobe.exe",
-        "to": "ffprobe.exe"
-      },
-      {
         "from": "extension",
         "to": "extension",
         "filter": [
@@ -82,7 +75,17 @@
           ]
         }
       ],
-      "artifactName": "${productName}-${version}-${arch}-setup.${ext}"
+      "artifactName": "${productName}-${version}-${arch}-setup.${ext}",
+      "extraResources": [
+        {
+          "from": "ffmpeg.exe",
+          "to": "ffmpeg.exe"
+        },
+        {
+          "from": "ffprobe.exe",
+          "to": "ffprobe.exe"
+        }
+      ]
     },
     "portable": {
       "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
@@ -101,7 +104,51 @@
         "repo": "yoinks-gui-fork"
       }
     ],
-    "afterPack": "build/after-pack.js"
+    "afterPack": "build/after-pack.js",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "executableName": "yoinks",
+      "icon": "build/icon.png",
+      "category": "AudioVideo;Network",
+      "synopsis": "Save videos and music from YouTube and 1,800+ sites",
+      "maintainer": "mrkraps <noreply@users.noreply.github.com>",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "extraResources": [
+        {
+          "from": "ffmpeg",
+          "to": "ffmpeg"
+        },
+        {
+          "from": "ffprobe",
+          "to": "ffprobe"
+        }
+      ],
+      "desktop": {
+        "entry": {
+          "Name": "Yoinks",
+          "Comment": "Save videos and music from YouTube and 1,800+ sites",
+          "Keywords": "video;music;download;youtube;yt-dlp;",
+          "StartupWMClass": "Yoinks"
+        }
+      }
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ]
+    }
   },
   "allowScripts": {
     "electron@33.4.11": true,
