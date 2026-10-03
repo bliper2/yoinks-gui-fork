@@ -1,6 +1,7 @@
 'use strict'
 
-// "Show in folder", "Open file" and the Windows folder picker.
+// "Show in folder", "Open file" and the folder picker (PowerShell on Windows,
+// zenity or kdialog on Linux).
 // Paths can come from the extension's history, so they are checked here:
 // reveal needs an existing path; open also needs a media file, so it can
 // never launch a program. No cmd.exe anywhere: explorer.exe opens/selects
@@ -53,6 +54,7 @@ function open(raw) {
  * Resolves the chosen folder, or null if cancelled.
  */
 function pickFolder(current) {
+  if (process.platform === 'linux') return pickFolderLinux(current)
   if (process.platform !== 'win32') return Promise.reject(new YoinksError({ code: 'unsupported', message: 'Choose the folder in the desktop app.' }))
   const script = [
     'Add-Type -AssemblyName System.Windows.Forms',
@@ -82,6 +84,27 @@ function pickFolder(current) {
       else resolve(out.trim() || null)
     })
   })
+}
+
+/** Linux: the desktop's own dialog through zenity (GNOME and most others) or kdialog (KDE). */
+async function pickFolderLinux(current) {
+  const title = 'Where should Yoinks save downloads?'
+  const tools = [
+    ['zenity', ['--file-selection', '--directory', `--title=${title}`, `--filename=${current.replace(/\/?$/, '/')}`]],
+    ['kdialog', ['--getexistingdirectory', current, '--title', title]],
+  ]
+  for (const [cmd, args] of tools) {
+    const result = await new Promise(resolve => {
+      const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'ignore'] })
+      let out = ''
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', chunk => (out += chunk))
+      child.on('error', () => resolve({ missing: true }))
+      child.on('close', code => resolve({ chosen: code === 0 ? out.trim() || null : null }))
+    })
+    if (!result.missing) return result.chosen
+  }
+  throw new YoinksError({ code: 'picker', message: 'No folder dialog found. Install zenity or kdialog, or set the folder in the desktop app.' })
 }
 
 module.exports = { reveal, open, pickFolder }

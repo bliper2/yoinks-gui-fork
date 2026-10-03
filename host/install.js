@@ -1,12 +1,15 @@
 'use strict'
 
 // Registers (or with --uninstall, removes) the native messaging host so the
-// yoinks extension can reach it. Windows only: browsers find hosts through a
-// per-user registry key pointing at a manifest file. No admin rights needed.
+// yoinks extension can reach it. No admin rights needed. Windows: browsers find
+// hosts through a per-user registry key pointing at a manifest file. Linux:
+// manifest files in each installed browser's profile folder.
 
 const { spawnSync } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
+
+const Linux = require('./linux-hosts')
 
 const HOST_NAME = 'com.yoinks.host'
 // Pinned by the "key" in extension/manifest.json, so it is the same on every machine.
@@ -30,8 +33,28 @@ function reg(args) {
   return result.status === 0
 }
 
+if (process.platform === 'linux') {
+  const launcher = path.join(__dirname, 'host.sh')
+  if (process.argv.includes('--uninstall')) {
+    Linux.unregister()
+    fs.rmSync(launcher, { force: true })
+    console.log('Removed the yoinks native host.')
+    process.exit(0)
+  }
+  fs.writeFileSync(launcher, `#!/bin/sh\nexec "${process.execPath}" "${path.join(__dirname, 'host.js')}" "$@"\n`, { mode: 0o755 })
+  fs.chmodSync(launcher, 0o755)
+  const written = Linux.register({ launcher, chromeOrigin: `chrome-extension://${EXTENSION_ID}/`, geckoId: GECKO_ID })
+  if (!written.length) {
+    console.error('No supported browser profile found. Start Chrome, Chromium, Brave, Edge, Vivaldi or Firefox once, then run this again.')
+    process.exit(1)
+  }
+  console.log(`Registered ${HOST_NAME} in:\n${written.map(file => `  ${file}`).join('\n')}`)
+  console.log('Now load the extension/ folder in your browser (see README).')
+  process.exit(0)
+}
+
 if (process.platform !== 'win32') {
-  console.error('The installer only supports Windows.')
+  console.error('The installer supports Windows and Linux.')
   process.exit(1)
 }
 

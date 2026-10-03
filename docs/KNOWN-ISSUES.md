@@ -48,6 +48,20 @@ Install the `.xpi` file from the release (open it with the browser and click Add
 
 Pin the portable exe once it is where you want to keep it, and do not move or rename it afterwards. When an update downloads a new portable file, unpin the old one and pin the new one.
 
+## Linux: the AppImage will not start
+
+Make it executable first (`chmod +x Yoinks-*.AppImage`). On a system without FUSE 2 (Ubuntu 22.04 and newer), install `libfuse2` (`libfuse2t64` on Ubuntu 24.04), or run it with `--appimage-extract-and-run`. The .deb and .rpm do not need FUSE.
+
+## Linux: the browser extension says the helper is not installed
+
+- Start Yoinks once, then restart the browser. Yoinks writes the helper files into the profile folder of every browser it finds (Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Waterfox, LibreWolf), so the browser must have been started once before Yoinks.
+- Browsers installed as a **Snap or Flatpak** (the default Firefox on Ubuntu, for example) run in a sandbox and cannot start the helper. Use a browser installed from a normal package, or a `.deb` / tarball build.
+- From source: run `npm run extension:install` in the Yoinks folder (needs Node.js).
+
+## Linux: no folder dialog, or no sound or thumbnails
+
+Choosing the folder from the extension needs `zenity` (GNOME and most desktops) or `kdialog` (KDE). The desktop app has its own dialog. Yoinks uses the bundled ffmpeg; a system `ffmpeg` is the fallback when running from source.
+
 ## Android: downloads stop when I leave the app
 
 Set **Settings, Apps, Yoinks, Battery** to **Unrestricted**. Some phone makers also need "Autostart" or "Lock in recents" turned on for Yoinks.

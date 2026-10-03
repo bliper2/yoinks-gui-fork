@@ -60,9 +60,11 @@ function start(getWindow) {
   if (!app.isPackaged) return // npm start: nothing to update
   const portableDir = process.env.PORTABLE_EXECUTABLE_DIR
   const portable = Boolean(process.env.PORTABLE_EXECUTABLE_FILE)
+  // .deb and .rpm are replaced by the package manager, not by us: only tell the user.
+  const packaged = process.platform === 'linux' && !process.env.APPIMAGE
 
   autoUpdater.setFeedURL(REPO)
-  autoUpdater.autoDownload = !portable
+  autoUpdater.autoDownload = !portable && !packaged
   autoUpdater.autoInstallOnAppQuit = true
 
   let told = null
@@ -85,7 +87,7 @@ function start(getWindow) {
   }
 
   autoUpdater.on('update-available', info => {
-    if (portable) tellPortable(info)
+    if (portable || packaged) tellPortable(info)
   })
 
   autoUpdater.on('update-downloaded', async info => {

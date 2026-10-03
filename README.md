@@ -25,6 +25,8 @@ Everything is on the [Releases](../../releases) page:
 |---|---|
 | `Yoinks-<version>-x64-setup.exe` | Windows installer. Updates itself and sets up the browser helper. |
 | `Yoinks-<version>-x64-portable.exe` | Windows, no install: just run it. |
+| `Yoinks-<version>-linux-x86_64.AppImage` | Linux, no install: `chmod +x` it and run it. Updates itself. |
+| `Yoinks-<version>-linux-amd64.deb` / `-linux-x86_64.rpm` | Linux, Debian/Ubuntu and Fedora/openSUSE packages. |
 | `Yoinks-extension-<version>.zip` | Browser extension for Brave, Chrome and Edge, with its helper (see [Browser extension](#browser-extension)). |
 | `Yoinks-extension-<version>.xpi` | Browser extension for Firefox 140+ and Waterfox. |
 | `Yoinks-android-<version>-arm64-v8a.apk` | Android, almost all phones from the last 8 years. |
@@ -155,6 +157,17 @@ the installer, put them in the project root first — take them from the
 installed app's `resources/` folder or from [ffmpeg.org](https://ffmpeg.org/download.html).
 `npm start` does not need them: it falls back to a system ffmpeg or the
 `ffmpeg-static` package.
+
+### Linux
+
+`npm install` and `npm start` work the same. yt-dlp is downloaded to `~/.yoinks/bin`,
+settings live in `~/.config/yoinks-gui`, and ffmpeg is the bundled copy, then
+the one on your PATH. Build the packages with `npm run dist:linux` (AppImage,
+.deb and .rpm in `release/`; put a Linux `ffmpeg` and `ffprobe` in the project
+root first, and install `rpm` for the .rpm). The AppImage updates itself; the
+.deb and .rpm tell you when a new version is out. The browser helper is set up
+by the installed app for every browser it finds; Snap and Flatpak browsers
+cannot use it (see `docs/KNOWN-ISSUES.md`).
 
 ## Browser extension
 

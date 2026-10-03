@@ -1,18 +1,22 @@
 'use strict'
 
-// Sets up the browser extension's helper for the installed Windows app, so
-// people do not need Node.js: browsers start Yoinks.exe itself in "run as
-// Node" mode on host/host.js. Registered per user (no admin) for Chrome, Edge,
-// Brave and Firefox/Waterfox, and refreshed every time the app starts so a
-// moved or updated install keeps working.
+// Sets up the browser extension's helper for the installed app, so people do
+// not need Node.js: browsers start Yoinks itself in "run as Node" mode on
+// host/host.js. Registered per user (no admin) and refreshed every time the
+// app starts so a moved or updated install keeps working.
+// Windows: registry keys for Chrome, Edge, Brave and Firefox/Waterfox.
+// Linux: manifest files in each browser's profile folder (host/linux-hosts.js),
+// for the .deb/.rpm install and for the AppImage.
 //
-// The portable exe cannot do this: it unpacks to a temporary folder that is
-// deleted on exit. There the helper stays "npm run extension:install".
+// The Windows portable exe cannot do this: it unpacks to a temporary folder
+// that is deleted on exit. There the helper stays "npm run extension:install".
 
 const { app } = require('electron')
 const { execFile } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
+
+const Linux = require('../host/linux-hosts')
 
 const HOST_NAME = 'com.yoinks.host'
 // Pinned by the "key" in extension/manifest.json and browser_specific_settings.gecko.id.
@@ -27,6 +31,7 @@ const CHROMIUM_KEYS = [
 const GECKO_KEYS = ['HKCU\\Software\\Mozilla\\NativeMessagingHosts', 'HKCU\\Software\\Waterfox\\NativeMessagingHosts']
 
 const isPortable = () => Boolean(process.env.PORTABLE_EXECUTABLE_FILE)
+const isLinux = process.platform === 'linux'
 
 /** 'installed' (can register), 'portable', or 'dev' (npm start). */
 function mode() {
@@ -39,7 +44,7 @@ function locations() {
   const resources = process.resourcesPath
   return {
     dir,
-    bat: path.join(dir, 'host.bat'),
+    bat: path.join(dir, isLinux ? 'host.sh' : 'host.bat'),
     chromeManifest: path.join(dir, `${HOST_NAME}.json`),
     geckoManifest: path.join(dir, `${HOST_NAME}.firefox.json`),
     hostJs: path.join(resources, 'app.asar', 'host', 'host.js'),
@@ -49,10 +54,31 @@ function locations() {
 
 const reg = args => new Promise(resolve => execFile('reg', args, { windowsHide: true }, error => resolve(!error)))
 
+/**
+ * Linux launcher: a shell script that runs this app as Node on host.js.
+ * An AppImage is mounted somewhere new on every run, so it is started by its
+ * own path ($APPIMAGE) and finds host.js through $APPDIR, which it sets.
+ */
+function registerLinux(where) {
+  try {
+    fs.mkdirSync(where.dir, { recursive: true })
+    const run = process.env.APPIMAGE
+      ? `exec "${process.env.APPIMAGE}" -e "require(process.env.APPDIR + '/resources/app.asar/host/host.js')" "$@"`
+      : `exec "${process.execPath}" "${where.hostJs}" "$@"`
+    fs.writeFileSync(where.bat, `#!/bin/sh\nELECTRON_RUN_AS_NODE=1\nexport ELECTRON_RUN_AS_NODE\n${run}\n`, { mode: 0o755 })
+    fs.chmodSync(where.bat, 0o755)
+    return Linux.register({ launcher: where.bat, chromeOrigin: CHROME_ORIGIN, geckoId: GECKO_ID }).length > 0
+  } catch {
+    return false
+  }
+}
+
 /** Write the launcher and host manifests and point the browsers at them. */
 async function register() {
-  if (process.platform !== 'win32' || mode() !== 'installed') return false
+  if (mode() !== 'installed') return false
   const where = locations()
+  if (isLinux) return registerLinux(where)
+  if (process.platform !== 'win32') return false
   try {
     fs.mkdirSync(where.dir, { recursive: true })
     // ELECTRON_RUN_AS_NODE makes Yoinks.exe behave like node.exe for this one process.
@@ -76,7 +102,9 @@ async function info() {
   const kind = mode()
   let ready = false
   if (kind === 'installed') {
-    ready = fs.existsSync(where.bat) && fs.existsSync(where.chromeManifest) && (await reg(['query', `${CHROMIUM_KEYS[0]}\\${HOST_NAME}`]))
+    ready = isLinux
+      ? fs.existsSync(where.bat) && Linux.registered(where.bat)
+      : fs.existsSync(where.bat) && fs.existsSync(where.chromeManifest) && (await reg(['query', `${CHROMIUM_KEYS[0]}\\${HOST_NAME}`]))
   }
   return { mode: kind, ready, folder: where.extensionDir }
 }

@@ -11,23 +11,30 @@
 const fs = require('node:fs')
 const path = require('node:path')
 
+const { render } = require('./changelog-page')
+
 const ROOT = path.join(__dirname, '..')
 const SOURCE = path.join(ROOT, 'CHANGELOG.md')
-const COPIES = [path.join(ROOT, 'extension', 'legal', 'changelog.md'), path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'raw', 'changelog.md')]
+// The same file also becomes the changelog page of the GitHub Pages site.
+const COPIES = [
+  { file: path.join(ROOT, 'extension', 'legal', 'changelog.md'), content: source => source },
+  { file: path.join(ROOT, 'android', 'app', 'src', 'main', 'res', 'raw', 'changelog.md'), content: source => source },
+  { file: path.join(ROOT, 'docs', 'changelog.html'), content: render },
+]
 
 const source = fs.readFileSync(SOURCE, 'utf-8')
-const stale = COPIES.filter(file => !fs.existsSync(file) || fs.readFileSync(file, 'utf-8') !== source)
+const stale = COPIES.map(copy => ({ file: copy.file, content: copy.content(source) })).filter(copy => !fs.existsSync(copy.file) || fs.readFileSync(copy.file, 'utf-8') !== copy.content)
 
 if (process.argv.includes('--check')) {
   if (stale.length) {
-    console.error(`Out of date, run "npm run sync":\n${stale.map(file => `  ${path.relative(ROOT, file)}`).join('\n')}`)
+    console.error(`Out of date, run "npm run sync":\n${stale.map(copy => `  ${path.relative(ROOT, copy.file)}`).join('\n')}`)
     process.exit(1)
   }
   console.log('Changelog copies are up to date.')
 } else {
-  for (const file of stale) {
+  for (const { file, content } of stale) {
     fs.mkdirSync(path.dirname(file), { recursive: true })
-    fs.writeFileSync(file, source)
+    fs.writeFileSync(file, content)
     console.log(`Wrote ${path.relative(ROOT, file)}`)
   }
   if (!stale.length) console.log('Changelog copies are up to date.')

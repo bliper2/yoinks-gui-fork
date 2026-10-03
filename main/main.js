@@ -21,6 +21,12 @@ const ROOT = path.join(__dirname, '..')
 // pins and notifications group under one Yoinks icon.
 const APP_ID = 'com.mrkraps.yoinks-gui'
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('ozone-platform-hint', 'auto') // Wayland when the session is one
+  // An AppImage cannot carry the SUID sandbox helper (and many distros block the
+  // unprivileged alternative), so it would not start. The .deb/.rpm keep the sandbox.
+  if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')
+}
 const STATE_PATH = path.join(app.getPath('userData'), 'app-state.json')
 const LEGAL = { terms: 'terms.md', privacy: 'privacy.md', changelog: 'changelog.md' }
 
