@@ -4,11 +4,19 @@
  */
 ;(function (root) {
   'use strict'
-  const { h, icon, button, formatDuration, parseTime } = root.YoinksDom
+  const { h, icon, button, formatDuration, parseTime, copyText, debugReport } = root.YoinksDom
   const Sites = root.YoinksSites
+
+  /** What was typed: a link (maybe without https://), or words to search for. */
+  function asLink(value) {
+    if (/^https?:\/\/\S+$/i.test(value)) return value
+    if (/^(www\.)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i.test(value) && !/\s/.test(value)) return `https://${value}`
+    return null
+  }
 
   function create(ctx) {
     const { send, bridge } = ctx
+    let lastView = null
     const el = h('section', { class: 'card lookup', 'aria-label': 'Look up a link' })
     let renderedKey = null
     let firstState = true
@@ -21,8 +29,8 @@
       inputmode: 'url',
       spellcheck: 'false',
       autocomplete: 'off',
-      placeholder: 'Paste a link…',
-      'aria-label': 'Video or music link',
+      placeholder: 'Paste a link or search…',
+      'aria-label': 'Video or music link, or words to search for',
     })
     const form = h(
       'form',
@@ -32,9 +40,11 @@
           event.preventDefault()
           const value = input.value.trim()
           if (!value) return input.focus()
-          // Several links pasted here go to the batch queue.
-          if ((value.match(/https?:\/\//g) ?? []).length > 1) send({ type: 'batch', text: value })
-          else send({ type: 'lookup', url: value })
+          // Several links pasted here go to the batch queue; words are a search.
+          if ((value.match(/https?:\/\//g) ?? []).length > 1) return send({ type: 'batch', text: value })
+          const link = asLink(value)
+          if (link) send({ type: 'lookup', url: link })
+          else send({ type: 'search', query: value })
         },
       },
       input,
@@ -44,7 +54,7 @@
       'div',
       { class: 'pane' },
       h('h1', { class: 'headline', text: 'Yoink a video or song' }),
-      h('p', { class: 'sub', text: 'YouTube, YouTube Music, Spotify, SoundCloud, Bandcamp, TikTok, and 1,800+ more sites.' }),
+      h('p', { class: 'sub', text: 'YouTube, YouTube Music, Spotify, SoundCloud, Bandcamp, TikTok, and 1,800+ more sites. Type words to search YouTube.' }),
       form,
     )
 
@@ -75,6 +85,16 @@
     }
 
     function errorPane(job) {
+      const copy = button({
+        icon: 'copy',
+        text: 'Copy details',
+        variant: 'ghost',
+        onClick: async () => {
+          const ok = await copyText(debugReport({ bridge, view: lastView, job }))
+          copy.querySelector('span').textContent = ok ? 'Copied' : 'Could not copy'
+          setTimeout(() => (copy.querySelector('span').textContent = 'Copy details'), 2000)
+        },
+      })
       return h(
         'div',
         { class: 'pane centered' },
@@ -86,7 +106,33 @@
           { class: 'row' },
           button({ icon: 'retry', text: 'Try again', variant: 'secondary', onClick: () => send({ type: 'retry', id: job.id }) }),
           button({ icon: 'back', text: 'Different link', variant: 'ghost', onClick: () => send({ type: 'closeLookup' }) }),
+          copy,
         ),
+      )
+    }
+
+    // ---------- search results ----------
+
+    function resultsPane(job) {
+      const rows = (job.results ?? []).map(result =>
+        h(
+          'button',
+          { type: 'button', class: 'result', onclick: () => send({ type: 'lookup', url: result.url }) },
+          result.thumbnail ? h('img', { class: 'result-thumb', src: result.thumbnail, alt: '', loading: 'lazy', referrerpolicy: 'no-referrer' }) : h('span', { class: 'result-thumb thumb-empty' }, icon('film')),
+          h(
+            'span',
+            { class: 'result-text' },
+            h('span', { class: 'result-title', text: result.title }),
+            h('span', { class: 'result-sub', text: [result.uploader, formatDuration(result.duration)].filter(Boolean).join(' · ') }),
+          ),
+        ),
+      )
+      return h(
+        'div',
+        { class: 'pane' },
+        h('p', { class: 'meta-title', text: `Results for “${job.searchQuery}”` }),
+        rows.length ? h('div', { class: 'result-list', role: 'list' }, rows) : h('p', { class: 'hint', text: 'Nothing found. Try other words.' }),
+        button({ icon: 'back', text: 'Search again', variant: 'ghost', onClick: () => send({ type: 'closeLookup' }) }),
       )
     }
 
@@ -108,7 +154,35 @@
       const end = h('input', { class: 'field field-sm', id: 'clip-end', type: 'text', inputmode: 'numeric', placeholder: 'end', 'aria-label': 'Clip end' })
       const times = h('div', { class: 'clip-times', hidden: true }, h('label', {}, 'From ', start), h('label', {}, 'to ', end))
       const remember = h('input', { type: 'checkbox', id: 'remember' })
+      const siteName = job.site && !job.entries?.length ? Sites.SITES.find(site => site.id === job.site)?.name : null
+      const rememberSite = siteName ? h('input', { type: 'checkbox', id: 'remember-site' }) : null
       const problem = h('p', { class: 'inline-error', role: 'alert', hidden: true })
+
+      // Playlists: tick the videos you want.
+      const entries = job.entries ?? []
+      const boxes = entries.map(() => h('input', { type: 'checkbox', checked: true }))
+      const picked = () => boxes.map((box, i) => (box.checked ? i + 1 : null)).filter(Boolean)
+      const summary = h('summary', {})
+      const updatePicked = () => (summary.textContent = `${picked().length} of ${entries.length} videos selected`)
+      boxes.forEach(box => box.addEventListener('change', updatePicked))
+      updatePicked()
+      const setAll = on => {
+        boxes.forEach(box => (box.checked = on))
+        updatePicked()
+      }
+      const chooser = entries.length
+        ? h(
+            'details',
+            { class: 'options playlist-picker' },
+            summary,
+            h('div', { class: 'row' }, button({ text: 'All', variant: 'link', onClick: () => setAll(true) }), button({ text: 'None', variant: 'link', onClick: () => setAll(false) })),
+            h(
+              'div',
+              { class: 'pick-list' },
+              entries.map((entry, i) => h('label', { class: 'check' }, boxes[i], h('span', { class: 'pick-title', text: `${i + 1}. ${entry.title}` }), entry.duration ? h('span', { class: 'pick-time', text: formatDuration(entry.duration) }) : null)),
+            ),
+          )
+        : null
       const options = h(
         'details',
         { class: 'options' },
@@ -138,7 +212,18 @@
         start.focus()
       })
 
-      function pick(index) {
+      function pick(index, overrides = null) {
+        let items = null
+        if (entries.length) {
+          const chosen = picked()
+          if (!chosen.length) {
+            problem.textContent = 'Choose at least one video.'
+            problem.hidden = false
+            chooser.open = true
+            return
+          }
+          if (chosen.length < entries.length) items = chosen
+        }
         let clip = null
         if (clipOn.checked) {
           const s = parseTime(start.value) ?? 0
@@ -152,7 +237,7 @@
           }
           clip = { start: s, end: e }
         }
-        send({ type: 'choose', index, clip, remember: remember.checked })
+        send({ type: 'choose', index, clip, items, overrides, remember: remember.checked, rememberSite: Boolean(rememberSite?.checked) })
       }
 
       const list = h(
@@ -176,16 +261,33 @@
         ),
       )
 
+      // Presets: one click picks the quality and the extras you saved.
+      const presets = (view.settings.presets ?? []).map(preset =>
+        h('button', {
+          type: 'button',
+          class: 'chip chip-btn',
+          title: `${preset.format === 'audio' ? 'Audio' : preset.format === 'best' ? 'Best video' : `${preset.format}p`}${preset.audioFormat ? `, ${preset.audioFormat.toUpperCase()}` : ''}${preset.embedSubs ? ', subtitles' : ''}${preset.embedThumbnail ? ', cover art' : ''}`,
+          text: preset.name,
+          onclick: () => {
+            const index = root.YoinksFormats.pickChoice(job.choices, preset.format)
+            pick(index < 0 ? job.defaultIndex : index, { audioFormat: preset.audioFormat, embedSubs: preset.embedSubs, embedThumbnail: preset.embedThumbnail })
+          },
+        }),
+      )
+
       return h(
         'div',
         { class: 'pane' },
         metaHeader(job),
+        presets.length ? h('div', { class: 'preset-row' }, h('span', { class: 'hint', text: 'Presets' }), presets) : null,
         Sites.hasPlaylistParam(job.url) && !job.playlistCount
           ? button({ icon: 'list', text: 'Get the whole playlist instead', variant: 'link', onClick: () => send({ type: 'lookup', url: job.url, playlist: true }) })
           : null,
+        chooser,
         list,
         options,
         h('label', { class: 'check' }, remember, 'Always use the format I pick'),
+        rememberSite ? h('label', { class: 'check' }, rememberSite, `Use this quality for ${siteName} from now on`) : null,
         problem,
         button({ icon: 'back', text: 'Different link', variant: 'ghost', onClick: () => send({ type: 'closeLookup' }) }),
       )
@@ -252,6 +354,7 @@
     // ---------- render ----------
 
     function render(view) {
+      lastView = view
       const job = view.lookup
       if (firstState) {
         firstState = false
@@ -265,6 +368,7 @@
       if (!job) pane = inputPane
       else if (job.phase === 'probing') pane = probingPane(job)
       else if (job.phase === 'lookup-error') pane = errorPane(job)
+      else if (job.phase === 'results') pane = resultsPane(job)
       else if (job.kind === 'spotify') pane = spotifyPane(job)
       else pane = formatsPane(job, view)
       el.replaceChildren(pane)
@@ -274,7 +378,15 @@
       }
     }
 
-    return { el, render, focus: () => input.focus() }
+    // A copied link offered by the desktop app: put it in the box, ready to go.
+    function prefill(url) {
+      if (renderedKey !== 'input') return
+      input.value = url
+      input.focus()
+      input.select()
+    }
+
+    return { el, render, focus: () => input.focus(), prefill }
   }
 
   root.YoinksViews = root.YoinksViews ?? {}

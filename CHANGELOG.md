@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.2.0
+
+- Type words instead of a link to search YouTube (Windows, extension, Android).
+- Playlists: tick the videos you want before downloading.
+- Settings has a health check for yt-dlp, ffmpeg, folders, storage and connection, with a button to copy the results.
+- Errors have a "Copy details" button for asking for help on Discord or GitHub.
+- Presets: save a combination like "Music FLAC" and pick it with one click (Windows, extension).
+- The format list can remember your quality for each website.
+- Windows: convert files on your PC to MP3, M4A, FLAC, Opus or MP4. Drop them on the window or use Batch.
+- Only start downloads between set times (Windows, Android). Android can also wait on low battery or Data Saver.
+- Sort files into folders by uploader or website, and split videos with chapters into one file per chapter.
+- Extension: right-click "Yoink all videos on this page". The button also appears on Reddit, Facebook, Dailymotion, Streamable and Rumble.
+- The Windows installer sets up the browser helper itself, so Node.js is not needed. Settings shows the extension folder to load.
+- Windows asks before closing while downloads run, can offer links you copy, accepts dropped links, and the portable app downloads its own updates.
+- Android: "Yoink copied link" tile and "Paste link" shortcut, pictures and a Share button in notifications.
+- A "What's new" screen appears after each update (Windows, Android).
+- Instagram posts that ask for a login are now retried later instead of failing at once.
+
 ## 2.1.1
 
 - Only one Yoinks window runs at a time. Opening it a second time brings the first one to the front, instead of starting a second queue that overwrote the first one's history.

@@ -61,6 +61,11 @@
     { id: 'instagram', name: 'Instagram', host: /^(www\.)?instagram\.com$/, media: /^\/([\w.]+\/)?(p|reel|reels|tv)\/[\w-]+/, music: false },
     { id: 'x', name: 'X', host: /^(www\.|mobile\.)?(x|twitter)\.com$/, media: /^\/[^/]+\/status\/\d+/, music: false },
     { id: 'vimeo', name: 'Vimeo', host: /^(www\.|player\.)?vimeo\.com$/, media: /^\/(video\/)?\d+|^\/channels\/[^/]+\/\d+/, music: false },
+    { id: 'reddit', name: 'Reddit', host: /^(www|old|new)\.reddit\.com$/, media: /^\/(r|user)\/[^/]+\/comments\/\w+/, music: false },
+    { id: 'facebook', name: 'Facebook', host: /^(www|m|web)\.facebook\.com$|^fb\.watch$/, media: /^\/(watch\/?$|reel\/\d+|[^/]+\/videos\/|share\/[vr]\/)/, music: false },
+    { id: 'dailymotion', name: 'Dailymotion', host: /^(www\.)?dailymotion\.com$/, media: /^\/video\/\w+/, music: false },
+    { id: 'streamable', name: 'Streamable', host: /^streamable\.com$/, media: /^\/[a-z0-9]{5,8}$/i, music: false },
+    { id: 'rumble', name: 'Rumble', host: /^rumble\.com$/, media: /^\/v[\w-]+\.html/, music: false },
     {
       id: 'twitch',
       name: 'Twitch',
@@ -97,6 +102,11 @@
     if (site.id === 'youtube-music' && u.pathname === '/watch') return u.searchParams.has('v')
     if (site.id === 'youtube-music' && u.pathname === '/playlist') return u.searchParams.has('list')
     if (site.id === 'twitch' && u.hostname === 'clips.twitch.tv') return u.pathname.length > 1
+    if (site.id === 'facebook') {
+      if (u.hostname === 'fb.watch') return u.pathname.length > 1
+      if (u.pathname.replace(/\/$/, '') === '/watch') return u.searchParams.has('v')
+      return /^\/(reel\/\d+|[^/]+\/videos\/|share\/[vr]\/)/.test(u.pathname)
+    }
     return site.media.test(u.pathname)
   }
 
@@ -125,8 +135,26 @@
     return ua.origin + ua.pathname.replace(/\/$/, '') === ub.origin + ub.pathname.replace(/\/$/, '')
   }
 
+  /**
+   * The video/track links among `hrefs` (a page's anchors), without
+   * duplicates: "Yoink all videos on this page". Playlist context and
+   * tracking parameters are dropped so one video is not listed twice.
+   */
+  function mediaLinks(hrefs, limit = 300) {
+    const found = new Set()
+    for (const href of hrefs) {
+      const u = parse(href)
+      if (!u || !isMediaPage(u.href)) continue
+      u.hash = ''
+      for (const key of ['list', 'index', 'pp', 'si', 'feature', 't']) u.searchParams.delete(key)
+      found.add(u.href)
+      if (found.size >= limit) break
+    }
+    return [...found]
+  }
+
   const isMusic = url => Boolean(siteFor(url)?.music)
   const isSpotify = url => Boolean(siteFor(url)?.spotify) && isMediaPage(url)
 
-  return { SITES, siteFor, isMediaPage, isPlaylistLink, hasPlaylistParam, sameMedia, isMusic, isSpotify }
+  return { SITES, siteFor, isMediaPage, isPlaylistLink, hasPlaylistParam, sameMedia, mediaLinks, isMusic, isSpotify }
 })

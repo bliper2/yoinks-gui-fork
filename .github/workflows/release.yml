@@ -1,0 +1,135 @@
+name: Release
+
+# Push a tag like v2.2.0 (after bumping the version everywhere and writing the
+# CHANGELOG.md section) and this builds the Windows installer, the portable
+# exe and both extension downloads, and attaches them to a GitHub release.
+#
+# Optional repository secrets (Settings -> Secrets and variables -> Actions):
+#   DISCORD_WEBHOOK_URL       post the changelog to the Discord update channel
+#   WINDOWS_CERT_BASE64       code-signing certificate (.pfx, base64) and
+#   WINDOWS_CERT_PASSWORD     its password: signs the Windows files
+#   ANDROID_KEYSTORE_BASE64   release keystore (base64) and
+#   ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD:
+#                             build and attach the signed Android APKs
+# Without a secret, that step is skipped.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows and extension
+    runs-on: windows-latest
+    env:
+      WINDOWS_CERT_BASE64: ${{ secrets.WINDOWS_CERT_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+      # ffmpeg is bundled into the app but is too big to keep in git.
+      - name: Get ffmpeg
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip -OutFile ffmpeg.zip
+          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-unzipped
+          Copy-Item (Get-ChildItem ffmpeg-unzipped -Recurse -Filter ffmpeg.exe | Select-Object -First 1).FullName .
+          Copy-Item (Get-ChildItem ffmpeg-unzipped -Recurse -Filter ffprobe.exe | Select-Object -First 1).FullName .
+
+      - name: Build (unsigned)
+        if: env.WINDOWS_CERT_BASE64 == ''
+        run: npm run dist:win
+
+      - name: Build (signed)
+        if: env.WINDOWS_CERT_BASE64 != ''
+        shell: pwsh
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          npm run sync
+          npx electron-builder --win --publish never --config.win.signAndEditExecutable=true
+
+      - run: npm run package:extension
+
+      - name: Attach to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/Yoinks-*-x64-setup.exe
+            release/Yoinks-*-x64-setup.exe.blockmap
+            release/Yoinks-*-x64-portable.exe
+            release/latest.yml
+            release/Yoinks-extension-*.zip
+            release/Yoinks-extension-*.xpi
+          generate_release_notes: false
+          fail_on_unmatched_files: true
+
+  android:
+    name: Android (signed)
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - name: Needs a release keystore
+        if: env.ANDROID_KEYSTORE_BASE64 == ''
+        run: echo "No release keystore secret, so the Android APKs are not built here."
+      - uses: actions/checkout@v4
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+      - uses: actions/setup-java@v4
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+      - name: Build signed APKs
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > yoinks-release.jks
+          printf 'storeFile=yoinks-release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --console=plain
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p ../apks
+          for abi in arm64-v8a armeabi-v7a universal; do
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "../apks/Yoinks-android-$VERSION-$abi.apk"
+          done
+      - name: Attach to the release
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apks/*.apk
+          fail_on_unmatched_files: true
+
+  announce:
+    name: Discord
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.DISCORD_WEBHOOK_URL != ''
+      - uses: actions/setup-node@v4
+        if: env.DISCORD_WEBHOOK_URL != ''
+        with:
+          node-version: 22
+      - name: Post the changelog
+        if: env.DISCORD_WEBHOOK_URL != ''
+        run: node scripts/discord-announce.js "${GITHUB_REF_NAME#v}"

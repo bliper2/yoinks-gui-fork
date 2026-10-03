@@ -46,6 +46,13 @@ enum class AudioBitrate(val kbps: Int?, val label: String) {
     K128(128, "128 kbps"),
 }
 
+/** Extra folder level under the download folder. Same choices as the Windows app. */
+enum class FolderBy(val label: String) {
+    NONE("No extra folder"),
+    UPLOADER("Uploader or channel"),
+    SITE("Website"),
+}
+
 enum class ShareBehavior(val label: String) {
     ASK("Show the options sheet"),
     INSTANT("Download instantly with the default format"),
@@ -72,12 +79,14 @@ data class AppSettings(
     val defaultFormat: DefaultFormat = DefaultFormat.BEST,
     val alwaysUseFormat: Boolean = false,
     val filenameTemplate: String = "{title}",
+    val folderBy: FolderBy = FolderBy.NONE,
     val audioFormat: AudioFormat = AudioFormat.MP3,
     val audioBitrate: AudioBitrate = AudioBitrate.BEST,
     // Tags
     val embedMetadata: Boolean = true,
     val embedThumbnail: Boolean = true,
     val embedSubs: Boolean = false,
+    val splitChapters: Boolean = false,
     val subsLang: String = "en",
     val tiktokNoWatermark: Boolean = true,
     // Playlists
@@ -88,6 +97,14 @@ data class AppSettings(
     val speedLimitMbps: Float = 0f,
     val retries: Int = 2,
     val wifiOnly: Boolean = false,
+    /** Only start downloads between [scheduleFrom] and [scheduleTo] ("HH:MM"). */
+    val scheduleOn: Boolean = false,
+    val scheduleFrom: String = "01:00",
+    val scheduleTo: String = "07:00",
+    /** Wait while the battery is low (15% or less) and the phone is not charging. */
+    val pauseOnLowBattery: Boolean = false,
+    /** Wait on mobile data while Android's Data Saver is on. */
+    val respectDataSaver: Boolean = false,
     val notifications: Boolean = true,
     // Sharing
     val shareBehavior: ShareBehavior = ShareBehavior.ASK,
@@ -96,8 +113,11 @@ data class AppSettings(
     val ytdlpAutoUpdate: Boolean = true,
     val ytdlpUpdateDays: Int = 7,
     val useCookies: Boolean = false,
-    // First run
+    // Remembered quality per website: "youtube" -> "720", "soundcloud" -> "audio".
+    val siteFormats: Map<String, String> = emptyMap(),
+    // First run, and the version whose "what's new" was shown ("" = fresh install).
     val termsAccepted: Int = 0,
+    val lastSeenVersion: String = "",
 ) {
     companion object {
         /** Bump when terms/privacy change so people accept again. */

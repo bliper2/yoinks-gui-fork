@@ -2,6 +2,7 @@ package com.yoinks.app.data.queue
 
 import android.content.Context
 import com.yoinks.app.data.history.HistoryRepository
+import com.yoinks.app.data.device.DeviceMonitor
 import com.yoinks.app.data.network.NetworkMonitor
 import com.yoinks.app.data.settings.SettingsRepository
 import com.yoinks.app.data.spotify.SpotifyRepository
@@ -16,6 +17,7 @@ import com.yoinks.app.domain.model.JobPhase
 import com.yoinks.app.domain.model.Platform
 import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.domain.model.YoinksException
+import com.yoinks.app.domain.queue.QueueGate
 import com.yoinks.app.service.DownloadNotifications
 import com.yoinks.app.service.DownloadServiceLauncher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,6 +36,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.time.LocalTime
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -54,6 +57,7 @@ class DownloadQueue @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val spotify: SpotifyRepository,
     private val network: NetworkMonitor,
+    private val device: DeviceMonitor,
     private val notifier: DownloadNotifications,
     private val launcher: DownloadServiceLauncher,
     private val json: Json,
@@ -69,6 +73,14 @@ class DownloadQueue @Inject constructor(
 
     init {
         appScope.launch { combine(settingsRepo.settings, network.state) { _, _ -> }.collect { pump() } }
+        // The schedule, battery and Data Saver change without any event we
+        // listen to: look again every half minute while something waits.
+        appScope.launch {
+            while (true) {
+                delay(30_000)
+                if (_jobs.value.any { it.phase.isPending }) pump()
+            }
+        }
     }
 
     // ---------- commands ----------
@@ -135,11 +147,15 @@ class DownloadQueue @Inject constructor(
         val net = network.state.value
         val now = System.currentTimeMillis()
         var active = running.size
-        val waitingText = when {
-            !net.online -> "Waiting for a connection"
-            settings.wifiOnly && !net.unmetered -> "Waiting for Wi-Fi"
-            else -> null
-        }
+        val waitingText = QueueGate.waitingText(
+            settings = settings,
+            online = net.online,
+            unmetered = net.unmetered,
+            dataSaverOn = device.dataSaverOn(),
+            batteryPercent = device.batteryPercent(),
+            charging = device.charging(),
+            now = LocalTime.now(),
+        )
         for (job in jobs.value.filter { it.phase.isPending }.sortedBy { it.createdAt }) {
             if (waitingText != null) {
                 if (job.phase != JobPhase.WAITING_FOR_NETWORK || job.status != waitingText) setPhase(job.id, JobPhase.WAITING_FOR_NETWORK, waitingText)

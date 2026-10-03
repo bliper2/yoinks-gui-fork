@@ -8,6 +8,8 @@ import com.yoinks.app.domain.model.MediaInfo
 import com.yoinks.app.domain.model.MediaKind
 import com.yoinks.app.domain.model.MusicCandidate
 import com.yoinks.app.domain.model.Platform
+import com.yoinks.app.domain.model.PlaylistEntry
+import com.yoinks.app.domain.model.SearchResult
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -37,6 +39,7 @@ object InfoParser {
             thumbnail = thumbnail(info),
             isPlaylist = isPlaylist,
             playlistCount = if (isPlaylist) ((info["entries"] as? JsonArray)?.size ?: info.number("playlist_count")?.toInt()) else null,
+            entries = if (isPlaylist) playlistEntries(info) else emptyList(),
             formats = formats,
             defaultIndex = FormatPicker.pick(formats, defaultFormat).coerceAtLeast(0),
             isSlideshow = platform == Platform.TIKTOK && videoCount == 0 && LinkRules.isTikTokSlideshow(url),
@@ -73,6 +76,30 @@ object InfoParser {
         listOf(FormatOption(MediaKind.VIDEO, "Best", ext = "mp4")) +
             listOf(1080, 720, 480).map { FormatOption(MediaKind.VIDEO, "${it}p (max)", it, exact = false, ext = "mp4") } +
             FormatOption(MediaKind.AUDIO, "Audio only", ext = settings.audioFormat.ext)
+
+    private const val MAX_ENTRIES = 500
+
+    private fun playlistEntries(info: JsonObject): List<PlaylistEntry> =
+        (info["entries"] as? JsonArray).orEmpty().take(MAX_ENTRIES).map { entry ->
+            val obj = entry as? JsonObject
+            PlaylistEntry(obj?.string("title") ?: "Untitled", obj?.number("duration")?.toLong())
+        }
+
+    /** Text search results (`yt-dlp -J --flat-playlist ytsearchN:…`). */
+    fun searchResults(json: Json, raw: String): List<SearchResult> {
+        val info = json.parseToJsonElement(raw).jsonObject
+        return (info["entries"] as? JsonArray).orEmpty().mapNotNull { entry ->
+            val obj = entry as? JsonObject ?: return@mapNotNull null
+            val id = obj.string("id") ?: return@mapNotNull null
+            SearchResult(
+                url = obj.string("url")?.takeIf { it.startsWith("https://") } ?: "https://www.youtube.com/watch?v=$id",
+                title = obj.string("title") ?: "Untitled",
+                uploader = obj.string("uploader") ?: obj.string("channel"),
+                durationSeconds = obj.number("duration")?.toLong(),
+                thumbnail = (obj["thumbnails"] as? JsonArray)?.mapNotNull { (it as? JsonObject)?.string("url") }?.lastOrNull { it.startsWith("https://") },
+            )
+        }
+    }
 
     private fun thumbnail(info: JsonObject): String? {
         info.string("thumbnail")?.takeIf { it.startsWith("https://") }?.let { return it }

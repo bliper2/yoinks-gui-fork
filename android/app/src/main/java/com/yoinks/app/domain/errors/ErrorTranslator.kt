@@ -65,7 +65,8 @@ object ErrorTranslator {
     fun instagramPrivate(detail: String = "") = YoinksError(
         "instagram-private",
         "Instagram only shows this post to signed-in users, so it may be private or from a private account. Public posts and reels download fine.",
-        false,
+        // Instagram also answers this way when it is rate-limiting a connection: try again a little later.
+        true,
         detail,
     )
 

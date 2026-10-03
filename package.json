@@ -1,6 +1,6 @@
 {
   "name": "yoinks-gui",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Save videos and music from YouTube, YouTube Music, Spotify (via YouTube Music), SoundCloud, Bandcamp and 1,800+ sites. Desktop app + browser extension, built on yt-dlp.",
   "main": "main/main.js",
   "author": "mrkraps",
@@ -9,10 +9,14 @@
   "homepage": "https://github.com/pablostanley/yoinks",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder",
-    "dist:win": "electron-builder --win --publish never",
+    "dist": "npm run sync && electron-builder",
+    "dist:win": "npm run sync && electron-builder --win --publish never",
     "extension:install": "node host/install.js",
-    "extension:uninstall": "node host/install.js --uninstall"
+    "extension:uninstall": "node host/install.js --uninstall",
+    "test": "node --test",
+    "sync": "node scripts/sync-changelog.js",
+    "package:extension": "node scripts/package-extension.js",
+    "announce": "node scripts/discord-announce.js"
   },
   "engines": {
     "node": ">=18"
@@ -22,6 +26,7 @@
     "ffmpeg-static": "^5.3.0"
   },
   "devDependencies": {
+    "adm-zip": "^0.6.1",
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
     "rcedit": "^5.0.2"
@@ -33,10 +38,12 @@
     "files": [
       "main/**/*",
       "core/**/*",
+      "host/**/*",
       "extension/**/*",
       "preload.js",
       "package.json",
-      "!**/*.map"
+      "!**/*.map",
+      "!host/com.yoinks.host*.json"
     ],
     "extraResources": [
       {
@@ -46,6 +53,14 @@
       {
         "from": "ffprobe.exe",
         "to": "ffprobe.exe"
+      },
+      {
+        "from": "extension",
+        "to": "extension",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
       }
     ],
     "directories": {
@@ -76,7 +91,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "include": "build/installer.nsh"
     },
     "publish": [
       {

@@ -20,6 +20,12 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.AnnotatedString
+import com.yoinks.app.domain.link.LinkExtractor
+import com.yoinks.app.ui.update.WhatsNewDialog
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,6 +59,9 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var settingsRepo: SettingsRepository
 
     private val destination = MutableStateFlow(Destination.HOME)
+
+    /** "Paste link" asked for (tile, app shortcut): download the clipboard link once the window has focus. */
+    private val pasteRequests = MutableStateFlow(0)
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,6 +109,9 @@ class MainActivity : ComponentActivity() {
         val sheet by share.sheet.collectAsState()
         val message by share.message.collectAsState()
         val current by destination.collectAsState()
+        val scope = rememberCoroutineScope()
+        val settings by settingsRepo.settings.collectAsState()
+        val pasteCount by pasteRequests.collectAsState()
 
         LaunchedEffect(message) {
             message?.let {
@@ -118,6 +130,32 @@ class MainActivity : ComponentActivity() {
             if (result == SnackbarResult.ActionPerformed) share.onIncoming(url, fromShare = false)
         }
 
+        // Paste link: the clipboard can only be read while Yoinks has focus.
+        LaunchedEffect(focused, pasteCount) {
+            if (pasteCount == 0 || !focused) return@LaunchedEffect
+            pasteRequests.value = 0
+            val text = clipboard.getText()?.text
+            if (LinkExtractor.first(text) != null) share.onIncoming(text, fromShare = false)
+            else share.say("No link on the clipboard. Copy a link first.")
+        }
+
+        // After an update: what is new in this version (once). A fresh install has nothing new.
+        val version = BuildConfig.VERSION_NAME.substringBefore('-')
+        var showNew by remember { mutableStateOf(false) }
+        LaunchedEffect(settings.lastSeenVersion, version) {
+            when {
+                settings.lastSeenVersion == version -> Unit
+                settings.lastSeenVersion.isEmpty() -> settingsRepo.update { it.copy(lastSeenVersion = version) }
+                else -> showNew = true
+            }
+        }
+        if (showNew) {
+            WhatsNewDialog(version) {
+                showNew = false
+                scope.launch { settingsRepo.update { it.copy(lastSeenVersion = version) } }
+            }
+        }
+
         YoinksShell(widthClass, share, snackbar, current, onDestination = { destination.value = it })
         ShareSheetHost(
             sheet,
@@ -127,6 +165,13 @@ class MainActivity : ComponentActivity() {
                 wholePlaylist = share::wholePlaylist,
                 downloadSpotify = share::downloadSpotify,
                 retry = share::retry,
+                pickResult = share::pickResult,
+                copyDetails = { url, error ->
+                    scope.launch {
+                        clipboard.setText(AnnotatedString(share.debugReport(url, error)))
+                        share.say("Details copied. Paste them in Discord or a GitHub issue.")
+                    }
+                },
             ),
         )
     }
@@ -146,6 +191,7 @@ class MainActivity : ComponentActivity() {
                 share.onIncoming(text, fromShare = true)
             }
             Intent.ACTION_VIEW -> intent.dataString?.let { share.onIncoming(it, fromShare = true) }
+            ACTION_PASTE -> pasteRequests.value += 1
         }
         intent.getStringExtra(EXTRA_DESTINATION)?.let { name ->
             Destination.entries.firstOrNull { it.name == name }?.let { lifecycleScope.launch { destination.value = it } }
@@ -153,6 +199,7 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        const val ACTION_PASTE = "com.yoinks.app.PASTE"
         const val EXTRA_DESTINATION = "com.yoinks.app.DESTINATION"
         const val DEST_QUEUE = "QUEUE"
     }

@@ -20,7 +20,13 @@ enum class Platform(val displayName: String, val isMusic: Boolean) {
     SPOTIFY("Spotify", true),
     VIMEO("Vimeo", false),
     TWITCH("Twitch", false),
+    DAILYMOTION("Dailymotion", false),
+    STREAMABLE("Streamable", false),
+    RUMBLE("Rumble", false),
     OTHER("Link", false);
+
+    /** Stable id for settings that remember something per website ("youtube-music"). */
+    val key: String get() = name.lowercase().replace('_', '-')
 
     companion object {
         fun detect(url: String): Platform {
@@ -39,6 +45,9 @@ enum class Platform(val displayName: String, val isMusic: Boolean) {
                 host == "open.spotify.com" || host == "spotify.link" -> SPOTIFY
                 host.endsWith("vimeo.com") -> VIMEO
                 host.endsWith("twitch.tv") -> TWITCH
+                host.endsWith("dailymotion.com") || host == "dai.ly" -> DAILYMOTION
+                host == "streamable.com" -> STREAMABLE
+                host.endsWith("rumble.com") -> RUMBLE
                 else -> OTHER
             }
         }

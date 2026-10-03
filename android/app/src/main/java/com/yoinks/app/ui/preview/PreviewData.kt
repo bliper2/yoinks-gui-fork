@@ -11,6 +11,8 @@ import com.yoinks.app.domain.model.MediaInfo
 import com.yoinks.app.domain.model.MediaKind
 import com.yoinks.app.domain.model.MusicCandidate
 import com.yoinks.app.domain.model.Platform
+import com.yoinks.app.domain.model.PlaylistEntry
+import com.yoinks.app.domain.model.SearchResult
 import com.yoinks.app.domain.model.SpotifyEntity
 import com.yoinks.app.domain.model.SpotifyLookup
 import com.yoinks.app.domain.model.SpotifyTrack
@@ -33,6 +35,36 @@ object PreviewData {
             FormatOption(MediaKind.AUDIO, "Audio only", null, false, "mp3", 3_100_000),
         ),
         defaultIndex = 0,
+    )
+
+    val playlist = MediaInfo(
+        url = "https://www.youtube.com/playlist?list=PLx",
+        platform = Platform.YOUTUBE,
+        title = "Road trip songs",
+        uploader = "Yoinks",
+        durationSeconds = null,
+        thumbnail = null,
+        isPlaylist = true,
+        playlistCount = 5,
+        entries = listOf(
+            PlaylistEntry("Dreams", 254),
+            PlaylistEntry("Go Your Own Way", 223),
+            PlaylistEntry("Take It Easy", 206),
+            PlaylistEntry("Africa", 295),
+            PlaylistEntry("Hotel California", 391),
+        ),
+        formats = listOf(
+            FormatOption(MediaKind.VIDEO, "Best", null, false, "mp4"),
+            FormatOption(MediaKind.VIDEO, "720p (max)", 720, false, "mp4"),
+            FormatOption(MediaKind.AUDIO, "Audio only", null, false, "mp3"),
+        ),
+        defaultIndex = 0,
+    )
+
+    val searchResults = listOf(
+        SearchResult("https://www.youtube.com/watch?v=1", "lofi hip hop radio - beats to relax/study to", "Lofi Girl", null, null),
+        SearchResult("https://www.youtube.com/watch?v=2", "Best of lofi hip hop 2025 - beats to relax/study to", "Lofi Girl", 8_220, null),
+        SearchResult("https://www.youtube.com/watch?v=3", "Chill Lofi Mix [chill lo-fi hip hop beats]", "Settle", 6_292, null),
     )
 
     private val tracks = listOf(

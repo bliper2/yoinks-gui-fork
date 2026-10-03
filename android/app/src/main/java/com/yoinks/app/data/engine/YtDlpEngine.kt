@@ -20,6 +20,7 @@ import com.yoinks.app.domain.model.LinkRules
 import com.yoinks.app.domain.model.MediaInfo
 import com.yoinks.app.domain.model.MusicCandidate
 import com.yoinks.app.domain.model.Platform
+import com.yoinks.app.domain.model.SearchResult
 import com.yoinks.app.domain.model.SpotifyPick
 import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.domain.model.YoinksException
@@ -81,7 +82,7 @@ class YtDlpEngine @Inject constructor(
         callback: ((Float, Long, String) -> Unit)? = null,
     ): YoutubeDLResponse = withContext(Dispatchers.IO) {
         ensureReady()
-        require(urls.all { it.startsWith("https://") || it.startsWith("http://") }) { "Only web links can be downloaded." }
+        require(urls.all { it.startsWith("https://") || it.startsWith("http://") || SEARCH_URL.matches(it) }) { "Only web links can be downloaded." }
         val versionBefore = ytdlpVersion
         val request = YoutubeDLRequest(urls).addCommands(args + if (urls.isEmpty()) emptyList() else listOf("--"))
         try {
@@ -133,6 +134,18 @@ class YtDlpEngine @Inject constructor(
             InfoParser.parse(json, response.out, url, settings)
         } catch (e: Exception) {
             throw YoinksException(YoinksError("parse", "Could not read the video details from yt-dlp.", true, e.message.orEmpty()), e)
+        }
+    }
+
+    override suspend fun searchVideos(query: String, settings: AppSettings): List<SearchResult> {
+        val text = query.replace(Regex("[\u0000-\u001f]"), " ").trim().take(200)
+        if (text.isEmpty()) throw YoinksException(YoinksError("bad-request", "Type something to search for.", false))
+        // "ytsearch8:words" goes after "--" like any link, so the words can never be options.
+        val response = run(YtDlpArgs.searchVideos(settings, cookies.file), listOf("ytsearch8:$text"), Platform.YOUTUBE)
+        return try {
+            InfoParser.searchResults(json, response.out)
+        } catch (e: Exception) {
+            throw YoinksException(YoinksError("parse", "Could not read the search results.", true, e.message.orEmpty()), e)
         }
     }
 
@@ -214,6 +227,7 @@ class YtDlpEngine @Inject constructor(
 
     private companion object {
         const val AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000L
+        val SEARCH_URL = Regex("^ytsearch[0-9]{1,2}:.+")
         val RETRY_AFTER_UPDATE = setOf("outdated", "login", "forbidden")
         val PARTIAL = listOf(".part", ".ytdl", ".json", ".temp", ".tmp", ".webp", ".jpg", ".png", ".vtt", ".srt")
     }

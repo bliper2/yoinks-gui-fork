@@ -1,0 +1,25 @@
+name: Idea or feature request
+description: Something Yoinks could do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Yoinks to do?
+      description: Describe what you want to get done, not only the button you imagine.
+    validations:
+      required: true
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      multiple: true
+      options:
+        - Windows app
+        - Browser extension
+        - Android app
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it matter to you?
+      description: What do you do today instead?

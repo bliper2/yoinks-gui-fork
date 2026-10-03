@@ -86,10 +86,27 @@
                 <data android:host="open.spotify.com" />
                 <data android:host="spotify.link" />
                 <data android:host="vimeo.com" />
+                <data android:host="dailymotion.com" />
+                <data android:host="www.dailymotion.com" />
+                <data android:host="dai.ly" />
+                <data android:host="streamable.com" />
+                <data android:host="rumble.com" />
                 <data android:host="www.twitch.tv" />
                 <data android:host="clips.twitch.tv" />
             </intent-filter>
         </activity>
+
+        <!-- Quick Settings tile: download the link on the clipboard. -->
+        <service
+            android:name=".service.PasteTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_yoinks"
+            android:label="@string/tile_paste"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".service.DownloadService"

@@ -5,6 +5,7 @@ import com.yoinks.app.domain.model.DownloadRequest
 import com.yoinks.app.domain.model.EngineProgress
 import com.yoinks.app.domain.model.MediaInfo
 import com.yoinks.app.domain.model.MusicCandidate
+import com.yoinks.app.domain.model.SearchResult
 import com.yoinks.app.domain.model.SpotifyPick
 import java.io.File
 
@@ -19,6 +20,9 @@ interface MediaEngine {
 
     /** Look a link up without downloading. [playlist] lists the whole list. */
     suspend fun probe(url: String, playlist: Boolean, settings: AppSettings): MediaInfo
+
+    /** Videos matching a text search on YouTube. */
+    suspend fun searchVideos(query: String, settings: AppSettings): List<SearchResult>
 
     /** Top YouTube Music song results, each resolved (artist, album, duration). */
     suspend fun searchMusic(query: String, limit: Int, settings: AppSettings): List<MusicCandidate>

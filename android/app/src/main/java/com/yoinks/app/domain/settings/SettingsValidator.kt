@@ -14,6 +14,10 @@ data class Validated(val settings: AppSettings, val errors: Map<String, String>)
 object SettingsValidator {
     val UPDATE_INTERVALS = listOf(1, 7, 30)
     private val LANG = Regex("^([a-z]{2,3}(-[A-Za-z0-9]{2,4})?|all)$")
+    private val TIME = Regex("^([01]\\d|2[0-3]):[0-5]\\d$")
+    private val SITE = Regex("^[a-z0-9-]{1,30}$")
+    private val QUALITIES = setOf("best", "2160", "1440", "1080", "720", "480", "audio")
+    private val VERSION = Regex("^[0-9A-Za-z.\\-]{0,20}$")
 
     fun validate(candidate: AppSettings, previous: AppSettings = AppSettings()): Validated {
         val errors = linkedMapOf<String, String>()
@@ -60,6 +64,19 @@ object SettingsValidator {
                 audioFolderUri = s.audioFolderUri?.takeIf { it.startsWith("content://") },
             )
         }
+        if (!TIME.matches(s.scheduleFrom)) {
+            errors["scheduleFrom"] = "Start time must look like 01:00."
+            s = s.copy(scheduleFrom = previous.scheduleFrom.takeIf { TIME.matches(it) } ?: "01:00")
+        }
+        if (!TIME.matches(s.scheduleTo)) {
+            errors["scheduleTo"] = "End time must look like 07:00."
+            s = s.copy(scheduleTo = previous.scheduleTo.takeIf { TIME.matches(it) } ?: "07:00")
+        }
+        if (s.siteFormats.size > 40 || s.siteFormats.any { (site, quality) -> !SITE.matches(site) || quality !in QUALITIES }) {
+            errors["siteFormats"] = "Remembered qualities must be a website and a known quality."
+            s = s.copy(siteFormats = s.siteFormats.filter { (site, quality) -> SITE.matches(site) && quality in QUALITIES }.entries.take(40).associate { it.key to it.value })
+        }
+        if (!VERSION.matches(s.lastSeenVersion)) s = s.copy(lastSeenVersion = "")
         if (s.termsAccepted < 0) s = s.copy(termsAccepted = 0)
         return Validated(s, errors)
     }

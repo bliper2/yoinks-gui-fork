@@ -27,11 +27,18 @@ data class MediaInfo(
     val thumbnail: String?,
     val isPlaylist: Boolean,
     val playlistCount: Int?,
+    /** Titles of a playlist's videos, so you can pick (empty for single videos). */
+    val entries: List<PlaylistEntry> = emptyList(),
     val formats: List<FormatOption>,
     val defaultIndex: Int,
     /** TikTok photo post: yt-dlp can only save its sound. */
     val isSlideshow: Boolean = false,
 )
+
+data class PlaylistEntry(val title: String, val durationSeconds: Long?)
+
+/** One hit of a text search. */
+data class SearchResult(val url: String, val title: String, val uploader: String?, val durationSeconds: Long?, val thumbnail: String?)
 
 @Serializable
 data class Clip(val startSeconds: Double, val endSeconds: Double?)
@@ -47,6 +54,8 @@ data class DownloadRequest(
     /** The chosen height exists exactly (from the quality list). */
     val exactHeight: Boolean = false,
     val playlist: Boolean = false,
+    /** Playlist videos to take (1-based). null = all. */
+    val items: List<Int>? = null,
     val clip: Clip? = null,
     /** Set for Spotify links: the confirmed YouTube Music matches. */
     val spotify: List<SpotifyPick>? = null,

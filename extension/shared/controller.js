@@ -14,9 +14,9 @@
  */
 ;(function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    module.exports = factory(require('./settings-schema.js'), require('./formats.js'), require('./sites.js'))
-  } else root.YoinksController = factory(root.YoinksSettings, root.YoinksFormats, root.YoinksSites)
-})(typeof self !== 'undefined' ? self : this, function (Schema, Formats, Sites) {
+    module.exports = factory(require('./settings-schema.js'), require('./formats.js'), require('./sites.js'), require('./schedule.js'))
+  } else root.YoinksController = factory(root.YoinksSettings, root.YoinksFormats, root.YoinksSites, root.YoinksSchedule)
+})(typeof self !== 'undefined' ? self : this, function (Schema, Formats, Sites, Schedule) {
   'use strict'
 
   const HISTORY_LIMIT = 50
@@ -33,7 +33,10 @@
   //   paused
   //   failed
   //   cancelling  stopping; hidden from the UI
-  const LOOKUP_PHASES = ['probing', 'choices', 'lookup-error']
+  //   results     a text search finished; the user picks a video (the lookup card)
+  const LOOKUP_PHASES = ['probing', 'choices', 'lookup-error', 'results']
+
+  const fileNameOf = p => String(p ?? '').split(/[\\/]/).pop() || String(p ?? '')
 
   function create({ backend, storage, notify = () => {}, onState = () => {}, onJobUpdate = () => {}, platform = 'extension' }) {
     const jobs = new Map()
@@ -46,6 +49,9 @@
     let toasts = []
     let toastId = 1
     let hostProblem = null
+    let health = { busy: false, report: null }
+    let prefill = null // links a page asked the batch view to show
+    let scheduleTimer = null
 
     // ---------- state out ----------
 
@@ -69,6 +75,8 @@
         queue: all.filter(job => !job.focus).map(publicJob),
         history,
         toasts,
+        health,
+        prefill,
       }
     }
 
@@ -187,21 +195,49 @@
     }
 
     // Start queued jobs while there are free slots.
+    // "Only download between set times" holds queued jobs on the desktop app.
+    // (The extension's worker can be shut down for hours, so it ignores it.)
+    function scheduleClosed() {
+      return platform === 'desktop' && !Schedule.isOpen(settings)
+    }
+
+    function holdTimer(on) {
+      if (on && !scheduleTimer) {
+        scheduleTimer = setInterval(pump, 30_000)
+        scheduleTimer.unref?.()
+      } else if (!on && scheduleTimer) {
+        clearInterval(scheduleTimer)
+        scheduleTimer = null
+      }
+    }
+
     function pump() {
       const now = Date.now()
+      const closed = scheduleClosed()
       const waiting = [...jobs.values()]
         .filter(job => job.phase === 'queued' && !(job.retryAt > now))
         .sort((a, b) => a.createdAt - b.createdAt)
       for (const job of waiting) {
+        if (closed) {
+          job.waitNote = `Waiting for ${settings.scheduleFrom}`
+          continue
+        }
         if (activeCount() >= settings.concurrency) break
         start(job)
       }
+      holdTimer(closed && waiting.length > 0)
       broadcast()
     }
 
     function start(job) {
       job.error = null
-      if (!job.probed) {
+      job.waitNote = null
+      if (job.convertTo) {
+        job.phase = 'downloading'
+        job.progress = null
+        job.processing = false
+        openChannel(job).post({ type: 'convert', filepath: job.url, target: job.convertTo })
+      } else if (!job.probed) {
         job.phase = 'probing'
         job.status = 'Looking up…'
         openChannel(job).post({ type: 'probe', url: job.url, playlist: job.wantPlaylist })
@@ -212,7 +248,7 @@
         job.channel.post(
           job.kind === 'spotify'
             ? { type: 'download', selections: job.selections }
-            : { type: 'download', index: job.choiceIndex, clip: job.clip },
+            : { type: 'download', index: job.choiceIndex, clip: job.clip, items: job.items ?? null, overrides: job.overrides ?? null },
         )
       }
       jobChanged(job)
@@ -239,6 +275,12 @@
           break
         case 'probed':
           return onProbed(job, message)
+        case 'results':
+          job.results = message.results
+          job.phase = 'results'
+          closeChannel(job)
+          jobChanged(job)
+          break
         case 'item':
           job.item = message.item
           job.progress = null
@@ -287,6 +329,7 @@
         site: message.site ?? (message.kind === 'spotify' ? 'spotify' : null),
         music: message.music ?? message.kind === 'spotify',
         choices: message.choices ?? null,
+        entries: message.entries ?? null,
         defaultIndex: message.defaultIndex ?? 0,
         spotifyType: message.spotifyType ?? null,
         tracks: message.tracks ?? null,
@@ -302,9 +345,14 @@
       }
 
       if (job.focus) {
-        // The lookup card: show formats unless "always use the default format".
-        if (settings.alwaysUseFormat) {
-          chooseFormat(job, job.defaultIndex)
+        // The lookup card: show formats unless "always use the default format"
+        // or this website's remembered quality. A playlist always shows its
+        // video list so you can pick.
+        const remembered = job.site ? settings.siteFormats?.[job.site] : null
+        if ((settings.alwaysUseFormat || remembered) && !job.entries?.length) {
+          let index = remembered ? Formats.pickChoice(job.choices, remembered) : job.defaultIndex
+          if (index < 0) index = job.defaultIndex
+          chooseFormat(job, index)
           job.focus = false
           job.phase = 'queued'
           toast('info', `Added “${job.title}” (${job.choiceLabel}).`)
@@ -366,7 +414,7 @@
         title: job.title || filepath,
         filepath,
         folder: folder ?? null,
-        url: job.url,
+        url: job.convertTo ? '' : job.url,
         kind: job.choiceKind ?? (job.kind === 'spotify' ? 'audio' : null),
         label: job.choiceLabel ?? (job.kind === 'spotify' ? 'Spotify' : null),
         at: Date.now(),
@@ -434,13 +482,30 @@
           openChannel(created).post({ type: 'probe', url, playlist: created.wantPlaylist })
           break
         }
+        case 'search': {
+          const query = String(cmd.query ?? '').replace(/\s+/g, ' ').trim().slice(0, 200)
+          if (!query) {
+            toast('error', 'Type something to search for.')
+            break
+          }
+          dropFocused()
+          const created = newJob(query, { focus: true, phase: 'probing', kind: 'search', searchQuery: query, title: query, status: 'Searching…', source: cmd.source ?? null })
+          openChannel(created).post({ type: 'search', query })
+          break
+        }
         case 'choose': {
           const current = focusedJob()
           if (current?.phase !== 'choices' || current.kind === 'spotify') return
           if (!chooseFormat(current, cmd.index, cmd.clip ?? null)) return
+          if (Array.isArray(cmd.items)) current.items = cmd.items.filter(Number.isInteger)
+          if (cmd.overrides) current.overrides = overridesOf(cmd.overrides)
           current.focus = false
           current.phase = 'queued'
           if (cmd.remember) await command({ type: 'settings:set', patch: { defaultFormat: settingFormat(current.wantFormat), alwaysUseFormat: true } })
+          if (cmd.rememberSite && current.site) {
+            await command({ type: 'settings:set', patch: { siteFormats: { ...settings.siteFormats, [current.site]: settingFormat(current.wantFormat) } } })
+            toast('info', `Yoinks will use ${current.choiceLabel} for this website from now on.`)
+          }
           return pump()
         }
         case 'chooseMatches': {
@@ -464,14 +529,33 @@
           job.phase = 'choices'
           break
 
+        // --- convert files on this PC (desktop app) ---
+        case 'convert': {
+          const target = String(cmd.target ?? 'mp3')
+          const paths = (Array.isArray(cmd.paths) ? cmd.paths : []).filter(p => typeof p === 'string' && p).slice(0, 50)
+          if (!paths.length) break
+          for (const filepath of paths) {
+            newJob(filepath, { convertTo: target, kind: 'convert', title: fileNameOf(filepath), choiceLabel: `to ${target.toUpperCase()}`, choiceKind: target === 'mp4' ? 'video' : 'audio' })
+          }
+          toast('info', paths.length === 1 ? 'Converting 1 file.' : `Converting ${paths.length} files.`)
+          return pump()
+        }
+        case 'convert:pick': {
+          const reply = await request({ type: 'files:pick' })
+          if (reply?.paths?.length) return command({ type: 'convert', paths: reply.paths, target: cmd.target })
+          break
+        }
+
         // --- adding without the format list ---
         case 'quick': {
           // Page buttons / context menu: 'best' | '1080' | 'audio' | 'playlist' | 'clip'
           const url = urlsFrom(cmd.url)[0]
           if (!url) return
           const explicit = Schema.FORMATS.some(([key]) => key === cmd.format)
-          const format = explicit ? cmd.format : defaultFormatFor(url)
+          const preset = presetById(cmd.preset)
+          const format = preset ? preset.format : explicit ? cmd.format : defaultFormatFor(url)
           newJob(url, {
+            overrides: preset ? presetOverrides(preset) : null,
             wantFormat: format,
             wantPlaylist: cmd.format === 'playlist',
             clip: cmd.format === 'clip' ? cmd.clip : null,
@@ -486,8 +570,9 @@
             toast('error', 'No links found. Put one link per line.')
             break
           }
-          const format = Schema.FORMATS.some(([key]) => key === cmd.format) ? cmd.format : null
-          for (const url of urls) newJob(url, { wantFormat: format ?? defaultFormatFor(url) })
+          const preset = presetById(cmd.preset)
+          const format = preset ? preset.format : Schema.FORMATS.some(([key]) => key === cmd.format) ? cmd.format : null
+          for (const url of urls) newJob(url, { wantFormat: format ?? defaultFormatFor(url), overrides: preset ? presetOverrides(preset) : null })
           toast('success', `Added ${urls.length} link${urls.length === 1 ? '' : 's'} to the queue.`)
           return pump()
         }
@@ -506,7 +591,7 @@
           if (job.phase === 'lookup-error') {
             job.phase = 'probing'
             job.error = null
-            openChannel(job).post({ type: 'probe', url: job.url, playlist: job.wantPlaylist })
+            openChannel(job).post(job.kind === 'search' ? { type: 'search', query: job.searchQuery } : { type: 'probe', url: job.url, playlist: job.wantPlaylist })
             break
           }
           if (job.phase !== 'failed') return
@@ -573,6 +658,26 @@
           })
           ytdlpInfo = { ...ytdlpInfo, busy: false }
           break
+        case 'health:run':
+          health = { ...health, busy: true }
+          broadcast()
+          await request({ type: 'health' }, reply => (health = { busy: false, report: reply }))
+          health = { ...health, busy: false }
+          break
+        case 'siteformat:forget': {
+          const rest = { ...settings.siteFormats }
+          delete rest[String(cmd.site)]
+          await request({ type: 'settings:set', patch: { siteFormats: rest } }, applySettings)
+          break
+        }
+        case 'prefill':
+          prefill = String(cmd.text ?? '').slice(0, 100_000) || null
+          break
+        case 'prefill:clear':
+          prefill = null
+          break
+        case 'tick':
+          return pump()
         case 'history:forget':
           history = history.filter(entry => entry.id !== cmd.entryId)
           saveHistory()
@@ -598,8 +703,24 @@
       return String(allowed.find(h => h >= Number(format)) ?? 'best')
     }
 
+    const presetById = id => (id ? (settings.presets ?? []).find(preset => preset.id === id) ?? null : null)
+
+    // What a preset changes for one download (an empty audio format keeps your default).
+    function presetOverrides(preset) {
+      return overridesOf({ audioFormat: preset.audioFormat, embedSubs: preset.embedSubs, embedThumbnail: preset.embedThumbnail })
+    }
+
+    function overridesOf(raw) {
+      const out = {}
+      if (Schema.AUDIO_FORMATS.some(([key]) => key === raw.audioFormat)) out.audioFormat = raw.audioFormat
+      if (typeof raw.embedSubs === 'boolean') out.embedSubs = raw.embedSubs
+      if (typeof raw.embedThumbnail === 'boolean') out.embedThumbnail = raw.embedThumbnail
+      return out
+    }
+
     function defaultFormatFor(url) {
-      return Sites.isMusic(url) ? 'audio' : settings.defaultFormat
+      const remembered = settings.siteFormats?.[Sites.siteFor(url)?.id]
+      return remembered ?? (Sites.isMusic(url) ? 'audio' : settings.defaultFormat)
     }
 
     // History entries are what notifications point at.
@@ -607,7 +728,7 @@
       return history.find(entry => entry.id === id) ?? null
     }
 
-    return { ready, command, view, historyEntry, broadcast }
+    return { ready, command, view, historyEntry, broadcast, urlsFrom }
   }
 
   return { create, LOOKUP_PHASES }

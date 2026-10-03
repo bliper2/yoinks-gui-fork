@@ -26,6 +26,7 @@
     settings: Views.settings.create(ctx),
     terms: Views.legal.create(ctx, 'terms'),
     privacy: Views.legal.create(ctx, 'privacy'),
+    changelog: Views.legal.create(ctx, 'changelog'),
   }
 
   // ---------- header ----------
@@ -67,8 +68,30 @@
   }
 
   const banner = h('div', { class: 'banner', role: 'alert', hidden: true })
+
+  // "Yoinks was updated": shown once per version, with a link to what changed.
+  const whatsNew = h('div', { class: 'banner banner-info', role: 'status', hidden: true })
+  let whatsNewHandled = false
+  function markSeen() {
+    whatsNew.hidden = true
+    bridge.send({ type: 'settings:set', patch: { lastSeenVersion: bridge.version } })
+  }
+  function checkWhatsNew(view, locked) {
+    if (whatsNewHandled || !view.ready || locked || !bridge.version) return
+    const seen = view.settings.lastSeenVersion
+    if (seen === bridge.version) return (whatsNewHandled = true)
+    whatsNewHandled = true
+    if (!seen) return markSeen() // a fresh install has nothing "new"
+    whatsNew.replaceChildren(
+      icon('info', { size: 16 }),
+      h('span', { text: `Yoinks was updated to ${bridge.version}.` }),
+      button({ text: "See what's new", variant: 'link', onClick: () => (markSeen(), go('changelog')) }),
+      button({ icon: 'close', label: 'Dismiss', variant: 'ghost', size: 'sm', onClick: markSeen }),
+    )
+    whatsNew.hidden = false
+  }
   const main = h('main', { class: 'app-main', id: 'main' })
-  document.body.append(header, banner, main)
+  document.body.append(header, banner, whatsNew, main)
 
   // ---------- routing ----------
 
@@ -107,6 +130,7 @@
     if (locked && current !== 'terms' && current !== 'privacy') go('terms')
     else if (firstTerms && !locked) go(bridge.initialView === 'settings' ? 'settings' : 'home')
 
+    checkWhatsNew(view, locked)
     banner.hidden = !view.hostProblem
     banner.replaceChildren(icon('alert', { size: 16 }), h('span', { text: view.hostProblem ?? '' }))
 
@@ -133,6 +157,30 @@
       else if (lastView?.lookup) bridge.send({ type: 'closeLookup' })
     }
   })
+
+  // ---------- drop a link (or files to convert) anywhere ----------
+
+  const hasDrop = event => [...(event.dataTransfer?.types ?? [])].some(type => ['Files', 'text/uri-list', 'text/plain'].includes(type))
+  document.addEventListener('dragover', event => hasDrop(event) && event.preventDefault())
+  document.addEventListener('drop', event => {
+    if (!hasDrop(event) || needsTerms(lastView) || event.target.closest?.('textarea')) return
+    event.preventDefault()
+    const files = [...(event.dataTransfer.files ?? [])]
+    if (files.length) {
+      if (bridge.pathOf) views.batch.addFiles(files)
+      else bridge.send({ type: 'toast', kind: 'error', text: 'Drop links here. File conversion is in the Yoinks desktop app.' })
+      return
+    }
+    const text = event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text/plain')
+    const links = text.match(/https?:\/\/[^\s<>"']+/g) ?? []
+    if (!links.length) return
+    go('home')
+    if (links.length > 1) bridge.send({ type: 'batch', text })
+    else bridge.send({ type: 'lookup', url: links[0] })
+  })
+
+  // The desktop app offers a link you copied (setting "Offer links I copy").
+  bridge.onClipboard?.(url => current === 'home' && lookup.prefill(url))
 
   go(bridge.initialView ?? 'home')
 })(typeof self !== 'undefined' ? self : this)

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Yoinks",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Save videos and music from YouTube, YouTube Music, SoundCloud, Bandcamp and 1,800+ sites to your PC. Uses yt-dlp through the Yoinks helper.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjNNQb4/ARFl6rXrrmzRcBcM+TScWPxnLfu63JoE1d9RMBnNsVWS2zN+y/izl/2pgDPmhGh2exPIL4lAbkb83+NyhO/NHwkl+JqAt4pEAubabdbYp5wM+3OQSZ8QGAg0/IqrpsP2lcwLsazvjixUH71YZs0ucsGg5ItUm3RGDq2CppzzzD8N+bwvxRKanHJh5gKNh+iT4FGOZk0SOyVg0Hoj2jIOY7ENd8kOOq/ZoHxU/5GDUOCpbMgGkrAiDeeZTGCqRpXxrT/CZ186/S7DVRPJ0Qct8J79kO4khAGh/VXg6+lpwU1+986ZzGpSnttKCSZFyE/6nStFKLl6mEgYAcwIDAQAB",
   "minimum_chrome_version": "116",
@@ -19,6 +19,7 @@
       "shared/filename-template.js",
       "shared/formats.js",
       "shared/sites.js",
+      "shared/schedule.js",
       "shared/controller.js",
       "background.js"
     ]
@@ -38,7 +39,14 @@
         "https://vimeo.com/*",
         "https://www.twitch.tv/*",
         "https://clips.twitch.tv/*",
-        "https://open.spotify.com/*"
+        "https://open.spotify.com/*",
+        "https://www.reddit.com/*",
+        "https://old.reddit.com/*",
+        "https://www.facebook.com/*",
+        "https://web.facebook.com/*",
+        "https://www.dailymotion.com/*",
+        "https://streamable.com/*",
+        "https://rumble.com/*"
       ],
       "js": [
         "shared/sites.js",

@@ -1,0 +1,84 @@
+'use strict'
+
+// Sets up the browser extension's helper for the installed Windows app, so
+// people do not need Node.js: browsers start Yoinks.exe itself in "run as
+// Node" mode on host/host.js. Registered per user (no admin) for Chrome, Edge,
+// Brave and Firefox/Waterfox, and refreshed every time the app starts so a
+// moved or updated install keeps working.
+//
+// The portable exe cannot do this: it unpacks to a temporary folder that is
+// deleted on exit. There the helper stays "npm run extension:install".
+
+const { app } = require('electron')
+const { execFile } = require('node:child_process')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const HOST_NAME = 'com.yoinks.host'
+// Pinned by the "key" in extension/manifest.json and browser_specific_settings.gecko.id.
+const CHROME_ORIGIN = 'chrome-extension://ijjoaplmmifaojgihjaefpbobfgfdimp/'
+const GECKO_ID = 'yoinks@yoinks.app'
+
+const CHROMIUM_KEYS = [
+  'HKCU\\Software\\Google\\Chrome\\NativeMessagingHosts',
+  'HKCU\\Software\\Microsoft\\Edge\\NativeMessagingHosts',
+  'HKCU\\Software\\BraveSoftware\\Brave-Browser\\NativeMessagingHosts',
+]
+const GECKO_KEYS = ['HKCU\\Software\\Mozilla\\NativeMessagingHosts', 'HKCU\\Software\\Waterfox\\NativeMessagingHosts']
+
+const isPortable = () => Boolean(process.env.PORTABLE_EXECUTABLE_FILE)
+
+/** 'installed' (can register), 'portable', or 'dev' (npm start). */
+function mode() {
+  if (!app.isPackaged) return 'dev'
+  return isPortable() ? 'portable' : 'installed'
+}
+
+function locations() {
+  const dir = path.join(app.getPath('userData'), 'helper')
+  const resources = process.resourcesPath
+  return {
+    dir,
+    bat: path.join(dir, 'host.bat'),
+    chromeManifest: path.join(dir, `${HOST_NAME}.json`),
+    geckoManifest: path.join(dir, `${HOST_NAME}.firefox.json`),
+    hostJs: path.join(resources, 'app.asar', 'host', 'host.js'),
+    extensionDir: app.isPackaged ? path.join(resources, 'extension') : path.join(__dirname, '..', 'extension'),
+  }
+}
+
+const reg = args => new Promise(resolve => execFile('reg', args, { windowsHide: true }, error => resolve(!error)))
+
+/** Write the launcher and host manifests and point the browsers at them. */
+async function register() {
+  if (process.platform !== 'win32' || mode() !== 'installed') return false
+  const where = locations()
+  try {
+    fs.mkdirSync(where.dir, { recursive: true })
+    // ELECTRON_RUN_AS_NODE makes Yoinks.exe behave like node.exe for this one process.
+    fs.writeFileSync(where.bat, `@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"${process.execPath}" "${where.hostJs}" %*\r\n`)
+    const host = { name: HOST_NAME, description: 'Yoinks downloader host', path: where.bat, type: 'stdio' }
+    fs.writeFileSync(where.chromeManifest, JSON.stringify({ ...host, allowed_origins: [CHROME_ORIGIN] }, null, 2))
+    fs.writeFileSync(where.geckoManifest, JSON.stringify({ ...host, allowed_extensions: [GECKO_ID] }, null, 2))
+  } catch {
+    return false
+  }
+  const jobs = [
+    ...CHROMIUM_KEYS.map(key => reg(['add', `${key}\\${HOST_NAME}`, '/ve', '/t', 'REG_SZ', '/d', where.chromeManifest, '/f'])),
+    ...GECKO_KEYS.map(key => reg(['add', `${key}\\${HOST_NAME}`, '/ve', '/t', 'REG_SZ', '/d', where.geckoManifest, '/f'])),
+  ]
+  return (await Promise.all(jobs)).every(Boolean)
+}
+
+/** What Settings shows: where the extension folder is and whether the helper is ready. */
+async function info() {
+  const where = locations()
+  const kind = mode()
+  let ready = false
+  if (kind === 'installed') {
+    ready = fs.existsSync(where.bat) && fs.existsSync(where.chromeManifest) && (await reg(['query', `${CHROMIUM_KEYS[0]}\\${HOST_NAME}`]))
+  }
+  return { mode: kind, ready, folder: where.extensionDir }
+}
+
+module.exports = { register, info, locations, mode }

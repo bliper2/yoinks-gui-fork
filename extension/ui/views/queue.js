@@ -4,7 +4,7 @@
  */
 ;(function (root) {
   'use strict'
-  const { h, icon, button, formatBytes, formatDuration, filenameOf, timeAgo } = root.YoinksDom
+  const { h, icon, button, formatBytes, formatDuration, filenameOf, timeAgo, copyText, debugReport } = root.YoinksDom
 
   const PHASE_TEXT = {
     queued: 'Waiting…',
@@ -22,12 +22,16 @@
   function statsText(job) {
     if (job.phase === 'failed') return job.error?.message ?? 'Download failed.'
     if (job.phase === 'queued' && job.error) return `${job.status ?? 'Retrying…'} ${job.error.message}`
+    if (job.phase === 'queued' && job.waitNote) return job.waitNote
     if (job.phase !== 'downloading') return (job.phase === 'probing' && job.status) || PHASE_TEXT[job.phase] || ''
     const p = job.progress
     const bits = []
     if (job.item) bits.push(`${job.item.index}/${job.item.count}${job.item.title ? ` · ${job.item.title}` : ''}`)
     if (job.processing) bits.push(job.choiceKind === 'audio' ? 'converting…' : 'finishing…')
-    else if (p) {
+    else if (job.kind === 'convert') {
+      // A conversion's "bytes" are microseconds of the file done so far.
+      bits.push(p?.totalBytes ? `${Math.min(100, Math.round((p.downloadedBytes / p.totalBytes) * 100))}%` : 'converting…')
+    } else if (p) {
       bits.push(p.totalBytes ? `${Math.min(100, Math.round((p.downloadedBytes / p.totalBytes) * 100))}%` : formatBytes(p.downloadedBytes))
       if (p.speed) bits.push(`${formatBytes(p.speed)}/s`)
       if (p.eta) bits.push(`${formatDuration(p.eta)} left`)
@@ -36,8 +40,9 @@
   }
 
   function create(ctx) {
-    const { send } = ctx
+    const { send, bridge } = ctx
     const rows = new Map()
+    let lastView = null
 
     const queueList = h('div', { class: 'job-list' })
     const queueCount = h('span', { class: 'count' })
@@ -77,7 +82,22 @@
       if (job.phase === 'review') b.push(button({ icon: 'check', text: 'Review', variant: 'secondary', size: 'sm', onClick: () => send({ type: 'review', id: job.id }) }))
       if (job.phase === 'downloading' || job.phase === 'queued') b.push(button({ icon: 'pause', label: 'Pause', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'pause', id: job.id }) }))
       if (job.phase === 'paused') b.push(button({ icon: 'play', label: 'Resume', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'resume', id: job.id }) }))
-      if (job.phase === 'failed') b.push(button({ icon: 'retry', label: 'Retry', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'retry', id: job.id }) }))
+      if (job.phase === 'failed') {
+        b.push(button({ icon: 'retry', label: 'Retry', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'retry', id: job.id }) }))
+        b.push(
+          button({
+            icon: 'copy',
+            label: 'Copy details for support',
+            variant: 'ghost',
+            size: 'sm',
+            onClick: async event => {
+              const ok = await copyText(debugReport({ bridge, view: lastView, job }))
+              send({ type: 'toast', kind: ok ? 'success' : 'error', text: ok ? 'Details copied. Paste them in Discord or a GitHub issue.' : 'Could not copy.' })
+              event.currentTarget.blur()
+            },
+          }),
+        )
+      }
       b.push(button({ icon: 'close', label: job.phase === 'failed' ? 'Remove' : 'Cancel', variant: 'ghost', size: 'sm', onClick: () => send({ type: job.phase === 'failed' ? 'dismiss' : 'cancel', id: job.id }) }))
       return b
     }
@@ -147,6 +167,7 @@
     return {
       el: h('div', { class: 'lists' }, queueSection, recentSection),
       render(view) {
+        lastView = view
         renderQueue(view.queue)
         renderHistory(view.history)
       },

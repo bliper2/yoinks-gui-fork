@@ -129,6 +129,25 @@ For long downloads, set Settings → Apps → Yoinks → Battery → **Unrestric
   search → matches with a confidence score you can change → download with
   Spotify's title, artist, album and cover written into the file.
 
+## What else it does
+
+- **Search:** type words on Home instead of a link and pick from the YouTube results.
+- **Playlists:** tick the videos you want before downloading.
+- **Quick paste:** a Quick Settings tile ("Yoink copied link") and a long-press
+  app shortcut ("Paste link") download the link on the clipboard. The
+  clipboard is read once, only when you tap them.
+- **Waits when it should:** Wi-Fi only, Data Saver, low battery (15% or less,
+  not charging) and an optional download window ("only between 01:00 and 07:00").
+- **Remembers quality per website** (a checkbox in the sheet; Settings lists and forgets them).
+- **Folders and chapters:** sort files by uploader or website, and optionally
+  split videos with chapters into one file per chapter.
+- **Notifications** show the video's picture and a Share button.
+- **Health check** (Settings) tests yt-dlp, ffmpeg, your folders, storage and
+  connection; **Copy details** on an error gives you a report to paste into
+  Discord or a GitHub issue.
+- **What's new** appears once after an update (from `res/raw/changelog.md`, a
+  copy of the repository's CHANGELOG.md made by `npm run sync`).
+
 ## Updates
 
 At start Yoinks checks the latest GitHub release of

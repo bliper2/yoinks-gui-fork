@@ -6,12 +6,14 @@
 //
 // Job messages (a session holds one video/playlist/Spotify link):
 //   probe {url, playlist?}   -> status…, probed
-//   download {index, clip?} | {selections}  -> item/progress/processing…, done
+//   search {query}           -> status…, results
+//   convert {filepath, target} -> progress…, done
+//   download {index, clip?, items?} | {selections}  -> item/progress/processing…, done
 //   pause | cancel           -> paused | cancelled
 // One-shot requests (reply once):
 //   settings:get | settings:set {patch} | settings:reset | settings:import {data}
-//   folder:pick | file:reveal {filepath} | file:open {filepath}
-//   ytdlp:version | ytdlp:update
+//   folder:pick | files:pick | file:reveal {filepath} | file:open {filepath}
+//   ytdlp:version | ytdlp:update | health
 // Errors reply { type: 'error', code, message, retryable }.
 //
 // Trust: choices, matches and file paths are held here and picked by index;
@@ -24,6 +26,7 @@ const ytdlp = require('../main/ytdlp')
 const store = require('./settings-store')
 const files = require('./files')
 const spotify = require('./spotify')
+const health = require('./health')
 const Schema = require('../extension/shared/settings-schema.js')
 const Sites = require('../extension/shared/sites.js')
 const Errors = require('../extension/shared/errors.js')
@@ -38,11 +41,12 @@ let lastAutoUpdate = 0
 class Session {
   /**
    * @param {(message: object) => void} send
-   * @param {{ pickFolder?: (current: string) => Promise<string|null> }} [options]
+   * @param {{ pickFolder?: (current: string) => Promise<string|null>, pickFiles?: () => Promise<string[]> }} [options]
    */
-  constructor(send, { pickFolder = files.pickFolder } = {}) {
+  constructor(send, { pickFolder = files.pickFolder, pickFiles = null } = {}) {
     this.send = send
     this.pickFolder = pickFolder
+    this.pickFiles = pickFiles
     this.abort = null
     this.bins = null
     this.probed = null // media: {url, playlist, infoJsonPath, choices, site}; spotify: {entity, matches, done:Set}
@@ -61,8 +65,12 @@ class Session {
     switch (message.type) {
       case 'probe':
         return this.probe(message.url, message.playlist === true)
+      case 'search':
+        return this.search(message.query)
+      case 'convert':
+        return this.convert(message.filepath, message.target)
       case 'download':
-        return this.probed?.kind === 'spotify' ? this.downloadSpotify(message.selections) : this.downloadMedia(message.index, message.clip)
+        return this.probed?.kind === 'spotify' ? this.downloadSpotify(message.selections) : this.downloadMedia(message.index, message.clip, message.items, message.overrides)
       case 'pause':
         return this.abort?.abort('pause')
       case 'cancel':
@@ -85,6 +93,12 @@ class Session {
         const { settings, errors } = chosen ? store.update({ outDir: chosen }) : { settings: store.load(), errors: {} }
         return this.send({ type: 'settings', settings, errors })
       }
+      case 'files:pick': {
+        if (!this.pickFiles) throw new ytdlp.YoinksError({ code: 'unsupported', message: 'Choose files in the desktop app.' })
+        return this.send({ type: 'files', paths: await this.pickFiles() })
+      }
+      case 'health':
+        return this.send({ type: 'health', ...(await health.run(store.load())) })
       case 'file:reveal':
         files.reveal(message.filepath)
         return this.send({ type: 'ok' })
@@ -181,7 +195,8 @@ class Session {
       this.track(infoJsonPath)
       const isPlaylist = info._type === 'playlist'
       const choices = ytdlp.buildChoices(info, { audioFormat: settings.audioFormat })
-      this.probed = { kind: 'media', url, playlist: isPlaylist, infoJsonPath: isPlaylist ? null : infoJsonPath, choices, site }
+      const entries = isPlaylist ? (info.entries ?? []).slice(0, MAX_ENTRIES).map(entry => ({ title: entry?.title ?? 'Untitled', duration: entry?.duration ?? null })) : null
+      this.probed = { kind: 'media', url, playlist: isPlaylist, infoJsonPath: isPlaylist ? null : infoJsonPath, choices, site, entryCount: entries?.length ?? 0 }
       this.send({
         type: 'probed',
         kind: 'media',
@@ -190,6 +205,7 @@ class Session {
         duration: info.duration ?? null,
         thumbnail: typeof info.thumbnail === 'string' && info.thumbnail.startsWith('https://') ? info.thumbnail : null,
         playlistCount: isPlaylist ? (info.entries?.length ?? info.playlist_count ?? null) : null,
+        entries,
         site: site?.id ?? null,
         music: Boolean(site?.music),
         choices,
@@ -230,18 +246,20 @@ class Session {
 
   // ---------- download ----------
 
-  async downloadMedia(index, rawClip) {
+  async downloadMedia(index, rawClip, rawItems, rawOverrides) {
     const probed = this.probed
     const choice = probed?.kind === 'media' ? probed.choices[index] : null
     if (!choice) throw new ytdlp.YoinksError({ code: 'bad-request', message: 'Pick a format first.' })
-    const settings = this.settings()
+    const settings = { ...this.settings(), ...validOverrides(rawOverrides) }
     const clip = rawClip && !probed.playlist ? validClip(rawClip) : null
+    const items = probed.playlist ? validItems(rawItems, probed.entryCount) : null
     const outDir = store.outDir(settings)
     const args = ytdlp.buildArgs({
       choice,
       settings,
       outDir,
       playlist: probed.playlist,
+      items,
       music: Boolean(probed.site?.music),
       clip,
       siteArgs: probed.site?.extraArgs ?? [],
@@ -307,6 +325,43 @@ class Session {
     })
   }
 
+  // ---------- search ----------
+
+  async search(rawQuery) {
+    const query = String(rawQuery ?? '').trim()
+    if (!query) throw new ytdlp.YoinksError({ code: 'bad-request', message: 'Type something to search for.' })
+    const settings = this.settings()
+    await this.withAbort(async signal => {
+      const { ytdlp: bin } = await this.binaries(signal, settings)
+      this.send({ type: 'status', message: 'Searching…' })
+      const results = await this.retryWithUpdate(settings, () => ytdlp.searchVideos(bin, query, { signal, settings }))
+      this.send({ type: 'results', query, results })
+    })
+  }
+
+  // ---------- convert a file on this PC ----------
+
+  async convert(rawPath, target) {
+    const input = typeof rawPath === 'string' && path.isAbsolute(rawPath) ? path.normalize(rawPath) : null
+    let stat = null
+    try {
+      stat = input ? fs.statSync(input) : null
+    } catch {
+      // handled below
+    }
+    if (!stat?.isFile()) throw new ytdlp.YoinksError({ code: 'missing', message: 'That file is gone, or it is not a file.' })
+    if (!ytdlp.CONVERTIBLE.has(path.extname(input).toLowerCase())) throw new ytdlp.YoinksError({ code: 'not-media', message: 'Only video and audio files can be converted.' })
+    if (!ytdlp.CONVERT_TARGETS[target]) throw new ytdlp.YoinksError({ code: 'bad-request', message: 'Pick a format to convert to.' })
+    const settings = this.settings()
+    const outDir = store.outDir(settings)
+    fs.mkdirSync(outDir, { recursive: true })
+    await this.withAbort(async signal => {
+      const ffmpeg = await ytdlp.findFfmpeg()
+      const filepath = await ytdlp.convertFile({ ffmpeg, input, outDir, target, signal, onProgress: progress => this.send({ type: 'progress', progress }) })
+      this.send({ type: 'done', filepath, folder: null })
+    })
+  }
+
   progressHandlers() {
     return {
       onProgress: progress => this.send({ type: 'progress', progress }),
@@ -317,6 +372,27 @@ class Session {
 }
 
 // ---------- validation ----------
+
+const MAX_ENTRIES = 500
+
+/** The few settings a preset may change for one download; anything else is dropped. */
+function validOverrides(raw) {
+  if (!raw || typeof raw !== 'object') return {}
+  const out = {}
+  if (Schema.AUDIO_FORMATS.some(([key]) => key === raw.audioFormat)) out.audioFormat = raw.audioFormat
+  if (typeof raw.embedSubs === 'boolean') out.embedSubs = raw.embedSubs
+  if (typeof raw.embedThumbnail === 'boolean') out.embedThumbnail = raw.embedThumbnail
+  return out
+}
+
+/** Picked playlist entries (1-based): sorted, unique, in range; null = everything. */
+function validItems(raw, count) {
+  if (raw == null) return null
+  if (!Array.isArray(raw)) throw new ytdlp.YoinksError({ code: 'bad-request', message: 'The chosen videos are not a list.' })
+  const items = [...new Set(raw.filter(n => Number.isInteger(n) && n >= 1 && n <= count))].sort((a, b) => a - b)
+  if (!items.length) throw new ytdlp.YoinksError({ code: 'bad-request', message: 'Choose at least one video.' })
+  return items.length === count ? null : items
+}
 
 function validUrl(raw) {
   let parsed
@@ -343,4 +419,4 @@ function errorReply(err) {
   return { type: 'error', code: e.code ?? 'unknown', message: e.message || 'Something went wrong.', retryable: Boolean(e.retryable) }
 }
 
-module.exports = { Session }
+module.exports = { Session, validItems, validOverrides }

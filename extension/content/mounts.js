@@ -270,8 +270,13 @@
   addEventListener('popstate', ensureAll)
   ensureAll()
 
+  // "Yoink all videos on this page": every link here that points at a video or
+  // track of a supported site (a channel, playlist, search or profile page).
+  const collectLinks = () => Sites.mediaLinks([...document.querySelectorAll('a[href]')].map(a => a.href))
+
   chrome.runtime.onMessage.addListener((message, _sender, reply) => {
     if (message?.type === 'yoinks:job') slots.forEach(slot => slot.update(message.job))
     else if (message?.type === 'currentTime') reply({ url: location.href, time: mediaElement()?.currentTime ?? null })
+    else if (message?.type === 'collectLinks') reply({ urls: collectLinks() })
   })
 })()

@@ -6,12 +6,12 @@
  */
 ;(function (root) {
   'use strict'
-  const { h, icon, button } = root.YoinksDom
+  const { h, icon, button, copyText } = root.YoinksDom
   const Schema = root.YoinksSettings
   const Template = root.YoinksTemplate
   const Theme = root.YoinksTheme
 
-  const SECTION_ICONS = { Downloads: 'download', Audio: 'music', Tags: 'file', Playlists: 'list', Queue: 'list', 'yt-dlp': 'settings', Look: 'sun' }
+  const SECTION_ICONS = { Health: 'health', Downloads: 'download', Audio: 'music', Tags: 'file', Playlists: 'list', Queue: 'list', 'yt-dlp': 'settings', Look: 'sun' }
   const THEME_ICONS = { system: 'monitor', light: 'sun', dark: 'moon' }
 
   function create(ctx) {
@@ -73,6 +73,11 @@
 
     function numberField(field) {
       const control = h('input', { class: 'field field-num', type: 'number', min: field.min, max: field.max, step: field.step, onchange: () => save(field.key, control.value) })
+      return { ...fieldShell(field, control), set: v => document.activeElement !== control && (control.value = v) }
+    }
+
+    function timeField(field) {
+      const control = h('input', { class: 'field field-time', type: 'time', onchange: () => save(field.key, control.value) })
       return { ...fieldShell(field, control), set: v => document.activeElement !== control && (control.value = v) }
     }
 
@@ -165,9 +170,9 @@
         ),
       )
       function preview() {
-        const video = Template.preview(control.value, { ext: 'mp4' })
-        const audio = Template.preview(control.value, { ext: settings.audioFormat })
-        const list = Template.preview(control.value, { ext: settings.audioFormat, playlist: true, folder: settings.playlistFolder, numbered: settings.playlistNumbered })
+        const video = Template.preview(control.value, { ext: 'mp4', folderBy: settings.folderBy })
+        const audio = Template.preview(control.value, { ext: settings.audioFormat, folderBy: settings.folderBy })
+        const list = Template.preview(control.value, { ext: settings.audioFormat, playlist: true, folder: settings.playlistFolder, numbered: settings.playlistNumbered, folderBy: settings.folderBy })
         out.replaceChildren(
           ...(video.error ? [h('span', { class: 'inline-error', text: video.error })] : [h('span', { text: video.name }), h('span', { text: audio.name }), h('span', { text: list.name })]),
         )
@@ -192,18 +197,73 @@
       event.preventDefault()
     }
 
-    const RENDERERS = { toggle: toggleField, select: selectField, number: numberField, text: textField, folder: folderField, segmented: segmentedField, accent: accentField, template: templateField }
+    const RENDERERS = { toggle: toggleField, select: selectField, number: numberField, text: textField, time: timeField, folder: folderField, segmented: segmentedField, accent: accentField, template: templateField }
 
     // ---------- sections ----------
 
     const sections = new Map()
     for (const field of Schema.FIELDS) {
       if (field.hidden) continue
+      if (field.only && field.only !== bridge.platform) continue // e.g. desktop-only switches
       const control = RENDERERS[field.type](field)
       controls.set(field.key, control)
       if (!sections.has(field.section)) sections.set(field.section, [])
       sections.get(field.section).push(control.row)
     }
+
+    // Presets: named combinations (quality, audio format, subtitles, cover art).
+    extras.presets = h('div', { class: 'setting setting-wide preset-editor' })
+    sections.get('Downloads').push(extras.presets)
+
+    const presetName = h('input', { class: 'field', type: 'text', maxlength: 24, placeholder: 'Name, e.g. Music FLAC', 'aria-label': 'Preset name' })
+    const presetFormat = h('select', { class: 'field', 'aria-label': 'Preset quality' }, Schema.FORMATS.map(([value, text]) => h('option', { value, text })))
+    const presetAudio = h('select', { class: 'field', 'aria-label': 'Preset audio format' }, h('option', { value: '', text: 'Audio: my default' }), Schema.AUDIO_FORMATS.map(([value, text]) => h('option', { value, text: `Audio: ${text}` })))
+    const presetSubs = h('input', { type: 'checkbox' })
+    const presetCover = h('input', { type: 'checkbox', checked: true })
+    const presetError = h('p', { class: 'inline-error', role: 'alert', hidden: true })
+    const addPreset = () => {
+      const preset = { id: Math.random().toString(36).slice(2, 8), name: presetName.value.trim(), format: presetFormat.value, audioFormat: presetAudio.value, embedSubs: presetSubs.checked, embedThumbnail: presetCover.checked }
+      const { errors } = Schema.validate({ presets: [...(settings.presets ?? []), preset] }, settings)
+      presetError.textContent = !preset.name ? 'Give the preset a name.' : (errors.presets ?? '')
+      presetError.hidden = !presetError.textContent
+      if (presetError.hidden) {
+        send({ type: 'settings:set', patch: { presets: [...(settings.presets ?? []), preset] } })
+        presetName.value = ''
+      }
+    }
+    function renderPresets(list) {
+      const key = JSON.stringify(list)
+      if (extras.presets.dataset.key === key) return
+      extras.presets.dataset.key = key
+      extras.presets.replaceChildren(
+        h('div', { class: 'setting-text' }, h('span', { class: 'label', text: 'Presets' }), h('p', { class: 'help', text: 'Save a combination once, then pick it with one click in the format list or in Batch.' })),
+        h(
+          'div',
+          { class: 'setting-control preset-list' },
+          list.map(preset =>
+            h(
+              'span',
+              { class: 'chip remembered-chip' },
+              `${preset.name}: ${preset.format === 'audio' ? 'audio' : preset.format === 'best' ? 'best video' : `${preset.format}p`}${preset.audioFormat ? ` ${preset.audioFormat.toUpperCase()}` : ''}`,
+              h('button', { type: 'button', class: 'chip-x', 'aria-label': `Delete preset ${preset.name}`, title: 'Delete', onclick: () => send({ type: 'settings:set', patch: { presets: list.filter(p => p.id !== preset.id) } }) }, icon('close', { size: 12 })),
+            ),
+          ),
+          h(
+            'div',
+            { class: 'preset-form' },
+            presetName,
+            h('div', { class: 'row wrap' }, presetFormat, presetAudio),
+            h('div', { class: 'row wrap' }, h('label', { class: 'check' }, presetSubs, 'Subtitles'), h('label', { class: 'check' }, presetCover, 'Cover art')),
+            button({ icon: 'check', text: 'Save preset', variant: 'secondary', size: 'sm', onClick: addPreset, disabled: list.length >= Schema.MAX_PRESETS }),
+            presetError,
+          ),
+        ),
+      )
+    }
+
+    // Quality remembered per website (set from the format list).
+    extras.sites = h('div', { class: 'setting setting-wide', hidden: true })
+    sections.get('Downloads').push(extras.sites)
 
     // Cookies need a clear privacy note next to the switch.
     sections.get('yt-dlp').push(
@@ -281,6 +341,110 @@
       button({ icon: 'info', text: 'Privacy', variant: 'secondary', onClick: () => ctx.go('privacy') }),
     )
 
+    // Health check: tests the parts Yoinks needs and says which one is broken.
+    extras.healthList = h('ul', { class: 'health-list', 'aria-live': 'polite' })
+    extras.healthRun = button({ icon: 'health', text: 'Run health check', variant: 'secondary', onClick: () => send({ type: 'health:run' }) })
+    extras.healthCopy = button({
+      icon: 'copy',
+      text: 'Copy results',
+      variant: 'ghost',
+      hidden: true,
+      onClick: async () => {
+        const report = lastHealth
+        if (!report) return
+        const lines = [`Yoinks ${bridge.version ?? '?'} (${bridge.platform === 'desktop' ? 'Windows app' : 'browser extension'}) health check`, ...report.checks.map(c => `${c.status.toUpperCase()}  ${c.label}: ${c.detail}`)]
+        const ok = await copyText(lines.join('\n'))
+        send({ type: 'toast', kind: ok ? 'success' : 'error', text: ok ? 'Results copied. Paste them in Discord or a GitHub issue.' : 'Could not copy.' })
+      },
+    })
+    let lastHealth = null
+    const healthCard = h(
+      'section',
+      { class: 'card settings-section', 'aria-labelledby': 'sec-Health' },
+      h('h2', { id: 'sec-Health' }, icon('health', { size: 16 }), 'Health check'),
+      h(
+        'div',
+        { class: 'setting' },
+        h('div', { class: 'setting-text' }, h('span', { class: 'label', text: 'Is everything working?' }), h('p', { class: 'help', text: 'Checks yt-dlp, ffmpeg, your download folder and your connection.' })),
+        h('div', { class: 'setting-control' }, extras.healthRun, extras.healthCopy),
+      ),
+      extras.healthList,
+    )
+
+    function renderHealth(health) {
+      extras.healthRun.disabled = Boolean(health?.busy)
+      extras.healthRun.querySelector('span').textContent = health?.busy ? 'Checking…' : health?.report ? 'Run again' : 'Run health check'
+      const report = health?.report
+      if (report === lastHealth) return
+      lastHealth = report ?? null
+      extras.healthCopy.hidden = !report
+      extras.healthList.replaceChildren(
+        ...(report?.checks ?? []).map(check =>
+          h(
+            'li',
+            { class: `health-item health-${check.status}` },
+            icon(check.status === 'ok' ? 'check' : check.status === 'warn' ? 'alert' : 'close', { size: 16 }),
+            h('span', { class: 'health-label', text: check.label }),
+            h('span', { class: 'health-detail', text: check.detail }),
+          ),
+        ),
+      )
+    }
+
+    function renderSites(siteFormats) {
+      const entries = Object.entries(siteFormats ?? {})
+      extras.sites.hidden = entries.length === 0
+      extras.sites.replaceChildren(
+        h('div', { class: 'setting-text' }, h('span', { class: 'label', text: 'Remembered quality' }), h('p', { class: 'help', text: 'Websites where Yoinks skips the format list.' })),
+        h(
+          'div',
+          { class: 'setting-control remembered' },
+          entries.map(([site, format]) =>
+            h(
+              'span',
+              { class: 'chip remembered-chip' },
+              `${root.YoinksSites?.SITES.find(s => s.id === site)?.name ?? site}: ${Schema.FORMATS.find(([key]) => key === format)?.[1] ?? format}`,
+              h('button', { type: 'button', class: 'chip-x', 'aria-label': `Forget ${site}`, title: 'Forget', onclick: () => send({ type: 'siteformat:forget', site }) }, icon('close', { size: 12 })),
+            ),
+          ),
+        ),
+      )
+    }
+
+    // Desktop app: where the browser extension lives and whether its helper is ready.
+    let extensionCard = null
+    if (bridge.extensionInfo) {
+      const status = h('p', { class: 'help', 'aria-live': 'polite', text: 'Checking…' })
+      const folder = h('span', { class: 'path mono', text: '' })
+      const copyPath = button({ icon: 'copy', text: 'Copy path', variant: 'secondary', onClick: async () => send({ type: 'toast', kind: (await copyText(folder.textContent)) ? 'success' : 'error', text: 'Folder path copied.' }) })
+      const openFolder = button({ icon: 'folder', text: 'Open folder', variant: 'secondary', onClick: () => bridge.openPath('extension') })
+      const releases = button({ icon: 'external', text: 'Firefox / Waterfox file', variant: 'secondary', onClick: () => bridge.openExternal('https://github.com/bliper2/yoinks-gui-fork/releases/latest') })
+      extensionCard = h(
+        'section',
+        { class: 'card settings-section', 'aria-labelledby': 'sec-ext' },
+        h('h2', { id: 'sec-ext' }, icon('download', { size: 16 }), 'Browser extension'),
+        h(
+          'div',
+          { class: 'setting setting-wide' },
+          h('div', { class: 'setting-text' }, h('span', { class: 'label', text: 'Brave, Chrome, Edge' }), status, h('p', { class: 'help', text: 'Open your browser\'s extensions page, turn on Developer mode, choose Load unpacked and pick this folder:' })),
+          h('div', { class: 'setting-control' }, folder),
+        ),
+        h('div', { class: 'button-grid' }, openFolder, copyPath, releases),
+      )
+      bridge.extensionInfo().then(info => {
+        if (!info) return
+        folder.textContent = info.folder
+        status.textContent =
+          info.mode === 'installed'
+            ? info.ready
+              ? 'The helper is set up. Nothing else to install.'
+              : 'The helper could not be set up. Restart Yoinks, or reinstall it.'
+            : info.mode === 'portable'
+              ? 'This portable copy cannot set up the helper. Install Yoinks with the installer for one-step setup.'
+              : 'Running from source: run npm run extension:install once.'
+      })
+    }
+
     const order = ['Look', 'Downloads', 'Audio', 'Tags', 'Playlists', 'Queue', 'yt-dlp']
     const el = h(
       'div',
@@ -290,6 +454,8 @@
       order.map(name =>
         h('section', { class: 'card settings-section', 'aria-labelledby': `sec-${name}` }, h('h2', { id: `sec-${name}` }, icon(SECTION_ICONS[name], { size: 16 }), name), sections.get(name)),
       ),
+      healthCard,
+      extensionCard,
       h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-keys' }, h('h2', { id: 'sec-keys' }, icon('settings', { size: 16 }), 'Keyboard'), shortcutRows),
       h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-data' }, h('h2', { id: 'sec-data' }, icon('file', { size: 16 }), 'Your data'), dataRow),
       h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-about' }, h('h2', { id: 'sec-about' }, icon('info', { size: 16 }), 'About'), h('p', { class: 'help', text: `Yoinks ${bridge.version ?? ''} · No ads, no tracking, no accounts.` }), legalRow),
@@ -304,6 +470,9 @@
           control.set(settings[key])
           control.showError(view.settingsErrors?.[key] ?? '')
         }
+        renderHealth(view.health)
+        renderSites(settings.siteFormats)
+        renderPresets(settings.presets ?? [])
         extras.version.textContent = view.ytdlp.version ?? (view.hostProblem ? 'unavailable' : '…')
         extras.versionNote.textContent = view.ytdlp.message || (view.ytdlp.version && !view.ytdlp.managed ? 'Installed on your system, not by Yoinks.' : view.hostProblem ?? '')
         extras.update.disabled = Boolean(view.ytdlp.busy)
