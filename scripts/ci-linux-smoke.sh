@@ -30,6 +30,8 @@ check() {
 }
 
 sudo apt-get install -y ./release/Yoinks-*-linux-amd64.deb
+npx asar list /opt/Yoinks/resources/app.asar | grep -E "extension/shared|extension.shared" || true
+find /opt/Yoinks -maxdepth 3 | head -40
 check "deb" /opt/Yoinks/yoinks
 
 appimage="$(ls "$root"/release/Yoinks-*-linux-x86_64.AppImage)"
