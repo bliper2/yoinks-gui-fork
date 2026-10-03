@@ -22,8 +22,11 @@ const COPIES = [
   { file: path.join(ROOT, 'docs', 'changelog.html'), content: render },
 ]
 
+// Git may check files out with CRLF on Windows; line endings are not a difference.
+const normal = text => text.replace(/\r\n/g, '\n')
+
 const source = fs.readFileSync(SOURCE, 'utf-8')
-const stale = COPIES.map(copy => ({ file: copy.file, content: copy.content(source) })).filter(copy => !fs.existsSync(copy.file) || fs.readFileSync(copy.file, 'utf-8') !== copy.content)
+const stale = COPIES.map(copy => ({ file: copy.file, content: copy.content(source) })).filter(copy => !fs.existsSync(copy.file) || normal(fs.readFileSync(copy.file, 'utf-8')) !== normal(copy.content))
 
 if (process.argv.includes('--check')) {
   if (stale.length) {

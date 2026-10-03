@@ -92,8 +92,11 @@ class YtDlpEngine @Inject constructor(
                 // An old yt-dlp can't read a changed site; it then says "unable
                 // to extract", "login required" (Instagram) or 403. Update now
                 // and try once more; a real private post fails again.
-                if (ErrorTranslator.translate(e.message).code !in RETRY_AFTER_UPDATE) throw e
+                val code = ErrorTranslator.translate(e.message).code
+                if (code !in RETRY_AFTER_UPDATE) throw e
                 updateIfStale()
+                // Already on the newest stable: a site fix may only be in the nightly build.
+                if (ytdlpVersion == versionBefore && code == "outdated") updateToNightly()
                 if (ytdlpVersion == versionBefore) throw e
                 YoutubeDL.getInstance().execute(request, processId, callback)
             }
@@ -106,6 +109,7 @@ class YtDlpEngine @Inject constructor(
 
     private val updateLock = Mutex()
     @Volatile private var lastAutoUpdate = 0L
+    @Volatile private var lastNightlyUpdate = 0L
     @Volatile private var ytdlpVersion: String? = null
 
     /**
@@ -118,6 +122,18 @@ class YtDlpEngine @Inject constructor(
         if (now - lastAutoUpdate < AUTO_UPDATE_EVERY_MS) return@withLock
         lastAutoUpdate = now
         runCatching { update() }
+    }
+
+    /** Switch to yt-dlp's nightly build (at most once an hour); sites are fixed there first. */
+    private suspend fun updateToNightly() = updateLock.withLock {
+        if (!settingsStore.data.first().ytdlpAutoUpdate) return@withLock
+        val now = System.currentTimeMillis()
+        if (now - lastNightlyUpdate < NIGHTLY_EVERY_MS) return@withLock
+        lastNightlyUpdate = now
+        runCatching {
+            YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel.NIGHTLY)
+            ytdlpVersion = YoutubeDL.getInstance().version(context)
+        }
     }
 
     /** yt-dlp versions are dates ("2025.11.12"); older than 60 days counts as old. */
@@ -227,6 +243,7 @@ class YtDlpEngine @Inject constructor(
 
     private companion object {
         const val AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000L
+        const val NIGHTLY_EVERY_MS = 60 * 60 * 1000L
         val SEARCH_URL = Regex("^ytsearch[0-9]{1,2}:.+")
         val RETRY_AFTER_UPDATE = setOf("outdated", "login", "forbidden")
         val PARTIAL = listOf(".part", ".ytdl", ".json", ".temp", ".tmp", ".webp", ".jpg", ".png", ".vtt", ".srt")
