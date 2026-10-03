@@ -550,3 +550,17 @@ kbd {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* "Yoinks was updated" notice: same shape as the warning banner, calmer color. */
+.banner-info {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.banner-info .icon {
+  color: var(--accent-ink);
+  margin-top: 0;
+}
+.banner-info span {
+  flex: 1;
+}

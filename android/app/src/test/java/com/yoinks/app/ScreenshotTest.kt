@@ -7,6 +7,8 @@ import com.yoinks.app.ui.history.HistoryPreview
 import com.yoinks.app.ui.queue.QueuePreview
 import com.yoinks.app.ui.settings.SettingsPreview
 import com.yoinks.app.ui.share.MediaSheetPreview
+import com.yoinks.app.ui.share.PlaylistSheetPreview
+import com.yoinks.app.ui.share.SearchSheetPreview
 import com.yoinks.app.ui.share.SpotifySheetPreview
 import com.yoinks.app.domain.model.AppSettings
 import com.yoinks.app.domain.model.UiStyle
@@ -40,6 +42,8 @@ class ScreenshotTest {
     @Test fun home() = shot("android-home") { PhoneShellPreview() }
     @Test fun shareSheet() = shot("android-share-sheet") { MediaSheetPreview() }
     @Test fun spotify() = shot("android-spotify") { SpotifySheetPreview() }
+    @Test fun search() = shot("android-search") { SearchSheetPreview() }
+    @Test fun playlist() = shot("android-playlist") { PlaylistSheetPreview() }
     @Test fun queue() = shot("android-queue") { QueuePreview() }
     @Test fun history() = shot("android-history") { HistoryPreview() }
     @Test fun settings() = shot("android-settings") { SettingsPreview() }

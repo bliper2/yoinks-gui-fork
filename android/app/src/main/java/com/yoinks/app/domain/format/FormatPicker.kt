@@ -18,6 +18,16 @@ object FormatPicker {
         return (videos.firstOrNull { (it.value.height ?: Int.MAX_VALUE) <= cap } ?: videos.last()).index
     }
 
+    /** The quality words a website can be remembered with. */
+    val REMEMBERABLE = listOf("best", "2160", "1440", "1080", "720", "480", "audio")
+
+    /** [format] ("720", "audio"…) as the nearest quality in [REMEMBERABLE] (a 360p pick becomes 480). */
+    fun rememberable(format: String): String {
+        if (format == "audio" || format == "best") return format
+        val height = format.toIntOrNull() ?: return "best"
+        return listOf(480, 720, 1080, 1440, 2160).firstOrNull { it >= height }?.toString() ?: "best"
+    }
+
     /** The wanted-format string that reproduces an option (for the queue). */
     fun formatOf(option: FormatOption): String = when {
         option.kind == MediaKind.AUDIO -> "audio"

@@ -27,8 +27,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -49,7 +55,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -63,7 +71,9 @@ import com.yoinks.app.domain.model.AccentPreset
 import com.yoinks.app.domain.model.AppSettings
 import com.yoinks.app.domain.model.AudioBitrate
 import com.yoinks.app.domain.model.AudioFormat
+import com.yoinks.app.domain.health.HealthStatus
 import com.yoinks.app.domain.model.DefaultFormat
+import com.yoinks.app.domain.model.FolderBy
 import com.yoinks.app.domain.model.ShareBehavior
 import com.yoinks.app.domain.model.ThemeMode
 import com.yoinks.app.domain.model.UiStyle
@@ -85,6 +95,8 @@ class SettingsCallbacks(
     val requestNotifications: () -> Unit,
     val openBattery: () -> Unit,
     val openLegal: (LegalPage) -> Unit,
+    val runHealth: () -> Unit = {},
+    val copyHealth: () -> Unit = {},
 )
 
 enum class LegalPage { ABOUT, TERMS, PRIVACY }
@@ -95,6 +107,7 @@ data class SettingsUi(
     val ytdlp: YtDlpState = YtDlpState(),
     val hasCookies: Boolean = false,
     val notificationsAllowed: Boolean = true,
+    val health: HealthUi = HealthUi(),
 )
 
 @Composable
@@ -104,6 +117,8 @@ fun SettingsRoute(openLegal: (LegalPage) -> Unit, onMessage: (String) -> Unit, v
     val ytdlp by vm.ytdlp.collectAsState()
     val hasCookies by vm.hasCookies.collectAsState()
     val message by vm.message.collectAsState()
+    val health by vm.health.collectAsState()
+    val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
     var notificationsAllowed by remember { mutableStateOf(notificationsGranted(context)) }
 
@@ -122,7 +137,7 @@ fun SettingsRoute(openLegal: (LegalPage) -> Unit, onMessage: (String) -> Unit, v
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { notificationsAllowed = it }
 
     SettingsScreen(
-        ui = SettingsUi(settings, errors, ytdlp, hasCookies, notificationsAllowed),
+        ui = SettingsUi(settings, errors, ytdlp, hasCookies, notificationsAllowed, health),
         callbacks = SettingsCallbacks(
             set = { vm.set(it) },
             pickFolder = { audio -> pickingAudio = audio; folderPicker.launch(null) },
@@ -141,6 +156,8 @@ fun SettingsRoute(openLegal: (LegalPage) -> Unit, onMessage: (String) -> Unit, v
                 runCatching { context.startActivity(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
             },
             openLegal = openLegal,
+            runHealth = vm::runHealth,
+            copyHealth = { clipboard.setText(AnnotatedString(vm.healthText())); onMessage("Results copied. Paste them in Discord or a GitHub issue.") },
         ),
     )
 }
@@ -155,6 +172,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
     val set = callbacks.set
     var confirm by remember { mutableStateOf<String?>(null) }
     var picker by remember { mutableStateOf(false) }
+    var timeDialog by remember { mutableStateOf<String?>(null) }
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
         Text("Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
@@ -213,6 +231,10 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 ChoiceRow("Default format", DefaultFormat.entries, s.defaultFormat, { it.label }, { v -> set { it.copy(defaultFormat = v) } }, "Music apps always default to audio")
                 SwitchRow("Always use the default format", s.alwaysUseFormat, { v -> set { it.copy(alwaysUseFormat = v) } }, "Skip the quality list and start at once")
                 TemplateEditor(s, ui.errors["filenameTemplate"], set)
+                ChoiceRow("Sort into folders by", FolderBy.entries, s.folderBy, { it.label }, { v -> set { it.copy(folderBy = v) } }, "Puts each file in a folder named after its uploader or website")
+                s.siteFormats.forEach { (site, quality) ->
+                    ActionRow("${site.replace('-', ' ').replaceFirstChar(Char::uppercase)}: ${if (quality == "audio") "audio only" else if (quality == "best") "best video" else "${quality}p"}", "Remembered quality. Tap to forget it.", onClick = { set { it.copy(siteFormats = it.siteFormats - site) } })
+                }
             }
 
             SettingsGroup("Audio") {
@@ -224,6 +246,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 SwitchRow("Save title, artist, album and chapters", s.embedMetadata, { v -> set { it.copy(embedMetadata = v) } })
                 SwitchRow("Add cover art", s.embedThumbnail, { v -> set { it.copy(embedThumbnail = v) } })
                 SwitchRow("Add subtitles to videos", s.embedSubs, { v -> set { it.copy(embedSubs = v) } })
+                SwitchRow("Split videos with chapters", s.splitChapters, { v -> set { it.copy(splitChapters = v) } }, "Also save one file per chapter, good for albums and mixes. The full file is kept too.")
                 if (s.embedSubs) {
                     var lang by remember(s.subsLang) { mutableStateOf(s.subsLang) }
                     OutlinedTextField(
@@ -258,6 +281,13 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 )
                 SwitchRow("Wi-Fi only", s.wifiOnly, { v -> set { it.copy(wifiOnly = v) } }, "Wait for Wi-Fi before downloading")
+                SwitchRow("Respect Data Saver", s.respectDataSaver, { v -> set { it.copy(respectDataSaver = v) } }, "On mobile data, wait while Android's Data Saver is on")
+                SwitchRow("Wait while the battery is low", s.pauseOnLowBattery, { v -> set { it.copy(pauseOnLowBattery = v) } }, "Below 15% and not charging, downloads wait")
+                SwitchRow("Only download between set times", s.scheduleOn, { v -> set { it.copy(scheduleOn = v) } }, "Waiting downloads start when the window opens. Running ones are not interrupted.")
+                if (s.scheduleOn) {
+                    ActionRow("Start at", s.scheduleFrom, onClick = { timeDialog = "from" })
+                    ActionRow("Stop starting new downloads at", s.scheduleTo, onClick = { timeDialog = "to" })
+                }
                 SwitchRow("Notifications", s.notifications, { v -> set { it.copy(notifications = v) } }, "When a download finishes or fails")
                 if (!ui.notificationsAllowed) {
                     ActionRow("Allow notifications", "Android is blocking Yoinks' notifications", onClick = callbacks.requestNotifications)
@@ -313,6 +343,34 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 )
             }
 
+            SettingsGroup("Health check") {
+                ActionRow("Is everything working?", "Checks yt-dlp, ffmpeg, your folders, storage and connection", onClick = callbacks.runHealth) {
+                    TextActionButton(if (ui.health.busy) "Checking…" else if (ui.health.items.isEmpty()) "Run" else "Run again", callbacks.runHealth, enabled = !ui.health.busy)
+                }
+                ui.health.items.forEach { item ->
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
+                        Icon(
+                            when (item.status) {
+                                HealthStatus.OK -> Icons.Rounded.CheckCircle
+                                HealthStatus.WARN -> Icons.Rounded.Warning
+                                HealthStatus.FAIL -> Icons.Rounded.Error
+                            },
+                            contentDescription = item.status.name.lowercase(),
+                            tint = when (item.status) {
+                                HealthStatus.OK -> Color(0xFF2FB47C)
+                                HealthStatus.WARN -> Color(0xFFB57B00)
+                                HealthStatus.FAIL -> MaterialTheme.colorScheme.error
+                            },
+                        )
+                        Column {
+                            Text(item.label, style = MaterialTheme.typography.titleSmall)
+                            Text(item.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (ui.health.items.isNotEmpty()) ActionRow("Copy results", "To paste into Discord or a GitHub issue", onClick = callbacks.copyHealth)
+            }
+
             SettingsGroup("Your data") {
                 ActionRow("Export settings", "Save them as a JSON file", onClick = callbacks.exportSettings)
                 ActionRow("Import settings", "Load a JSON export", onClick = callbacks.importSettings)
@@ -328,6 +386,16 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
         }
     }
 
+    timeDialog?.let { which ->
+        TimeDialog(
+            initial = if (which == "from") s.scheduleFrom else s.scheduleTo,
+            onDismiss = { timeDialog = null },
+            onPick = { hhmm ->
+                set { if (which == "from") it.copy(scheduleFrom = hhmm) else it.copy(scheduleTo = hhmm) }
+                timeDialog = null
+            },
+        )
+    }
     if (picker) {
         ColorPickerDialog(s.customAccent, onDismiss = { picker = false }) { color ->
             set { it.copy(accent = AccentPreset.CUSTOM, customAccent = color) }
@@ -400,6 +468,20 @@ private fun Swatch(color: Color, label: String, selected: Boolean, onClick: () -
 
 private fun folderName(uri: String): String =
     Uri.decode(uri).substringAfterLast(':').ifBlank { "Chosen folder" }
+
+/** Pick a time of day ("HH:MM", 24 hours) for the download window. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimeDialog(initial: String, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val parts = initial.split(":")
+    val state = rememberTimePickerState(parts.getOrNull(0)?.toIntOrNull() ?: 1, parts.getOrNull(1)?.toIntOrNull() ?: 0, is24Hour = true)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        text = { TimePicker(state = state) },
+        confirmButton = { TextButton(onClick = { onPick("%02d:%02d".format(state.hour, state.minute)) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
 
 private val previewCallbacks = SettingsCallbacks({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 

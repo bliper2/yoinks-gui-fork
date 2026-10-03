@@ -33,6 +33,10 @@ object YtDlpArgs {
             (if (playlist) listOf("--flat-playlist", "--yes-playlist") else listOf("--no-playlist")) +
             cookies(settings, cookieFile)
 
+    /** A text search: the "ytsearchN:words" pseudo-link goes after "--" like any link. */
+    fun searchVideos(settings: AppSettings, cookieFile: File?): List<String> =
+        listOf("-J", "--flat-playlist", "--no-warnings") + cookies(settings, cookieFile)
+
     fun searchMusic(limit: Int, settings: AppSettings, cookieFile: File?): List<String> =
         listOf("--no-warnings", "--skip-download", "--playlist-items", "1-$limit", "--print", "%(.{id,title,artist,album,duration,channel})j") +
             cookies(settings, cookieFile)
@@ -82,13 +86,18 @@ object YtDlpArgs {
             args += listOf("--embed-subs", "--sub-langs", langs)
         }
         if (settings.speedLimitMbps > 0f) args += listOf("--limit-rate", "${settings.speedLimitMbps}M")
+        if (request.playlist && !request.items.isNullOrEmpty()) args += listOf("--playlist-items", request.items.joinToString(","))
+        if (settings.splitChapters && request.clip == null) {
+            // One file per chapter in a folder next to the full file.
+            args += listOf("--split-chapters", "-o", "chapter:" + File(outputDir, "%(title).100B/%(section_number)03d - %(section_title).100B.%(ext)s").absolutePath)
+        }
         if (platform == Platform.TWITCH) args += listOf("--concurrent-fragments", "4")
         args += cookies(settings, cookieFile)
         // Files land in the gallery with today's date, not the upload date.
         args += "--no-mtime"
 
         val suffix = request.clip?.let { " (clip ${clock(it.startSeconds)}-${it.endSeconds?.let(::clock) ?: "end"})" }.orEmpty()
-        val template = FilenameTemplate.toYtdlp(settings.filenameTemplate, playlistNames, settings.playlistFolder, settings.playlistNumbered, suffix)
+        val template = FilenameTemplate.toYtdlp(settings.filenameTemplate, playlistNames, settings.playlistFolder, settings.playlistNumbered, suffix, settings.folderBy)
         args += listOf("-o", File(outputDir, template).absolutePath)
         return args
     }

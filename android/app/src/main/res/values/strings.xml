@@ -19,4 +19,8 @@
     <string name="eta_left">%1$s left</string>
     <string name="action_pause_all">Pause</string>
     <string name="action_cancel_all">Cancel</string>
+    <string name="action_share_file">Share</string>
+    <string name="tile_paste">Yoink copied link</string>
+    <string name="shortcut_paste">Paste link</string>
+    <string name="shortcut_paste_long">Download the copied link</string>
 </resources>

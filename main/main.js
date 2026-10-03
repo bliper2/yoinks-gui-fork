@@ -4,7 +4,7 @@
 // extension (extension/shared/controller.js) with an in-process backend
 // (core/local-backend.js), and shows the same UI (extension/app.html).
 
-const { app, BrowserWindow, ipcMain, shell, dialog, Notification } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog, Notification, clipboard } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
 
@@ -13,6 +13,8 @@ const { createLocalBackend } = require('../core/local-backend')
 const store = require('../core/settings-store')
 const files = require('../core/files')
 const updater = require('./updater')
+const helper = require('./helper')
+const Ytdlp = require('./ytdlp')
 
 const ROOT = path.join(__dirname, '..')
 // Same as "appId" in package.json (the installer's shortcut uses it): taskbar
@@ -20,7 +22,7 @@ const ROOT = path.join(__dirname, '..')
 const APP_ID = 'com.mrkraps.yoinks-gui'
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
 const STATE_PATH = path.join(app.getPath('userData'), 'app-state.json')
-const LEGAL = { terms: 'terms.md', privacy: 'privacy.md' }
+const LEGAL = { terms: 'terms.md', privacy: 'privacy.md', changelog: 'changelog.md' }
 
 let mainWindow = null
 
@@ -54,6 +56,16 @@ async function pickFolder(current) {
   return result.canceled || !result.filePaths.length ? null : result.filePaths[0]
 }
 
+// "Convert files": the desktop app has a real file dialog.
+async function pickFiles() {
+  const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
+    title: 'Choose files to convert',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Video and audio', extensions: [...Ytdlp.CONVERTIBLE].map(ext => ext.slice(1)) }],
+  })
+  return result.canceled ? [] : result.filePaths
+}
+
 function notify({ title, message, target }) {
   if (!Notification.isSupported()) return
   const n = new Notification({ title, body: message, icon: path.join(ROOT, 'extension', 'icons', 'icon128.png') })
@@ -69,7 +81,7 @@ function notify({ title, message, target }) {
 }
 
 const controller = Controller.create({
-  backend: createLocalBackend({ pickFolder }),
+  backend: createLocalBackend({ pickFolder, pickFiles }),
   storage,
   notify,
   onState: view => mainWindow?.webContents.send('yoinks:state', view),
@@ -122,10 +134,43 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', event => event.preventDefault())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
+  // Closing the window ends the app, and with it any running download: ask first.
+  mainWindow.on('close', event => {
+    if (quitting) return
+    const running = controller.view().queue.filter(job => job.phase === 'downloading' || job.phase === 'probing').length
+    if (!running || !store.load().confirmClose) return
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'question',
+      buttons: ['Keep Yoinks open', 'Close and stop'],
+      defaultId: 0,
+      cancelId: 0,
+      title: 'Downloads are running',
+      message: running === 1 ? 'Yoinks is still downloading 1 file.' : `Yoinks is still downloading ${running} files.`,
+      detail: 'If you close it now, the downloads stop. Paused ones keep their partial files.',
+    })
+    if (choice === 0) event.preventDefault()
+  })
+
+  // Setting "Offer links I copy": put a copied link in the link box on return.
+  let lastClipboardLink = ''
+  mainWindow.on('focus', () => {
+    if (!store.load().clipboardWatch) return
+    const link = controller.urlsFrom(clipboard.readText())[0]
+    if (link && link !== lastClipboardLink) {
+      lastClipboardLink = link
+      mainWindow?.webContents.send('yoinks:clipboard', link)
+    }
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
 }
+
+// Set when the app is really quitting (including "restart to update"), so the
+// close question above is only asked for a click on the window's own close.
+let quitting = false
+app.on('before-quit', () => (quitting = true))
 
 // A second copy would run its own queue and overwrite this one's history:
 // bring the open window to the front instead.
@@ -141,6 +186,7 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     createWindow()
     updater.start(() => mainWindow)
+    helper.register() // browser extension helper, no Node.js needed
   })
 }
 
@@ -175,6 +221,13 @@ ipcMain.on('yoinks:open-external', (event, url) => {
   } catch {
     // not a URL
   }
+})
+
+ipcMain.handle('yoinks:extension-info', event => (fromOurWindow(event) ? helper.info() : null))
+
+ipcMain.on('yoinks:open-path', (event, which) => {
+  if (!fromOurWindow(event) || which !== 'extension') return
+  shell.openPath(helper.locations().extensionDir)
 })
 
 ipcMain.on('yoinks:version', event => {

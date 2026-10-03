@@ -16,6 +16,9 @@ import com.yoinks.app.domain.model.DownloadRequest
 import com.yoinks.app.domain.model.FormatOption
 import com.yoinks.app.domain.model.LinkRules
 import com.yoinks.app.domain.model.MediaInfo
+import com.yoinks.app.domain.model.SearchResult
+import com.yoinks.app.domain.support.DebugReport
+import com.yoinks.app.BuildConfig
 import com.yoinks.app.domain.model.Platform
 import com.yoinks.app.domain.model.ShareBehavior
 import com.yoinks.app.domain.model.SpotifyLookup
@@ -36,6 +39,7 @@ sealed interface SheetState {
     data class Working(val url: String, val status: String) : SheetState
     data class Media(val info: MediaInfo) : SheetState
     data class Spotify(val url: String, val lookup: SpotifyLookup) : SheetState
+    data class Results(val query: String, val results: List<SearchResult>) : SheetState
     data class Failed(val url: String?, val error: YoinksError) : SheetState
 }
 
@@ -71,7 +75,10 @@ class ShareViewModel @Inject constructor(
     fun onIncoming(text: String?, fromShare: Boolean) {
         val url = LinkExtractor.first(text)
         if (url == null) {
-            _sheet.value = SheetState.Failed(null, YoinksError("no-link", "No link found in what was shared. Share the post or video itself.", false))
+            // Words typed or pasted on Home are a search; a share without a link is a mistake.
+            val words = text?.trim().orEmpty()
+            if (!fromShare && words.isNotEmpty() && !words.contains("://")) search(words)
+            else _sheet.value = SheetState.Failed(null, YoinksError("no-link", "No link found in what was shared. Share the post or video itself.", false))
             return
         }
         viewModelScope.launch {
@@ -123,7 +130,10 @@ class ShareViewModel @Inject constructor(
                 }
                 _sheet.value = SheetState.Working(real, "Looking up ${platform.displayName}…")
                 val info = engine.probe(real, playlist = false, settings = settings)
-                if (settings.alwaysUseFormat && info.formats.isNotEmpty()) {
+                // "Always use the default format", or a quality remembered for this website:
+                // skip the list. A playlist always shows its video list so you can pick.
+                val remembered = settings.siteFormats[info.platform.key]
+                if ((settings.alwaysUseFormat || remembered != null) && !info.isPlaylist && info.formats.isNotEmpty()) {
                     val option = info.formats[FormatPicker.pick(info.formats, defaultFormatFor(info.platform)).coerceAtLeast(0)]
                     download(info, option, clip = null)
                 } else {
@@ -136,6 +146,34 @@ class ShareViewModel @Inject constructor(
             }
         }
     }
+
+    /** A text search on YouTube; picking a result continues like a pasted link. */
+    fun search(query: String) {
+        lookup?.cancel()
+        lookup = viewModelScope.launch {
+            try {
+                _sheet.value = SheetState.Working(query, "Searching…")
+                _sheet.value = SheetState.Results(query, engine.searchVideos(query, settings))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _sheet.value = SheetState.Failed(null, ErrorTranslator.translate(e, Platform.YOUTUBE))
+            }
+        }
+    }
+
+    fun pickResult(url: String) = onIncoming(url, fromShare = false)
+
+    /** The report behind "Copy details" (needs yt-dlp's version, so it suspends). */
+    suspend fun debugReport(url: String?, error: YoinksError): String = DebugReport.build(
+        appVersion = BuildConfig.VERSION_NAME,
+        device = "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT}), ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+        ytdlpVersion = runCatching { engine.version() }.getOrNull(),
+        url = url,
+        code = error.code,
+        message = error.message,
+        detail = error.detail,
+    )
 
     fun wholePlaylist(url: String) {
         lookup?.cancel()
@@ -153,7 +191,8 @@ class ShareViewModel @Inject constructor(
 
     fun retry(url: String) = start(url, instant = false)
 
-    fun download(info: MediaInfo, option: FormatOption, clip: Clip?) {
+    /** [items]: the picked playlist videos (1-based), null for all. [rememberSite]: use this quality for this website from now on. */
+    fun download(info: MediaInfo, option: FormatOption, clip: Clip?, items: List<Int>? = null, rememberSite: Boolean = false) {
         queue.enqueue(
             listOf(
                 DownloadRequest(
@@ -163,10 +202,15 @@ class ShareViewModel @Inject constructor(
                     format = FormatPicker.formatOf(option),
                     exactHeight = option.exact,
                     playlist = info.isPlaylist,
+                    items = if (info.isPlaylist) items else null,
                     clip = if (info.isPlaylist) null else clip,
                 ),
             ),
         )
+        if (rememberSite && !info.isPlaylist && info.platform != Platform.OTHER && info.platform != Platform.SPOTIFY) {
+            val quality = FormatPicker.rememberable(FormatPicker.formatOf(option))
+            viewModelScope.launch { settingsRepo.update { it.copy(siteFormats = it.siteFormats + (info.platform.key to quality)) } }
+        }
         close()
         say("Added “${info.title}” to the queue")
     }
@@ -216,7 +260,7 @@ class ShareViewModel @Inject constructor(
         say("Downloading with your default format")
     }
 
-    private fun defaultFormatFor(platform: Platform) = if (platform.isMusic) "audio" else settings.defaultFormat.key
+    private fun defaultFormatFor(platform: Platform) = settings.siteFormats[platform.key] ?: if (platform.isMusic) "audio" else settings.defaultFormat.key
 
     fun close() {
         lookup?.cancel()

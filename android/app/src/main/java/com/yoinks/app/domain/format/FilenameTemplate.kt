@@ -1,5 +1,7 @@
 package com.yoinks.app.domain.format
 
+import com.yoinks.app.domain.model.FolderBy
+
 /**
  * File name templates like "{artist} - {title}": validation, live preview
  * and conversion to a yt-dlp output template. Same rules as the Windows app.
@@ -40,20 +42,30 @@ object FilenameTemplate {
     }
 
     /** Example name, e.g. "Rick Astley - Never Gonna Give You Up.mp3" (or an error). */
-    fun preview(template: String, ext: String, playlist: Boolean = false, folder: Boolean = true, numbered: Boolean = true): Result<String> {
+    fun preview(template: String, ext: String, playlist: Boolean = false, folder: Boolean = true, numbered: Boolean = true, folderBy: FolderBy = FolderBy.NONE): Result<String> {
         validate(template)?.let { return Result.failure(IllegalArgumentException("File name $it.")) }
         var name = PART.replace(template.trim()) { TOKENS.getValue(it.groupValues[1]).sample } + ".$ext"
         if (playlist && numbered) name = "001 - $name"
         if (playlist && folder) name = "My Playlist/$name"
+        when (folderBy) {
+            FolderBy.UPLOADER -> name = "Rick Astley/$name"
+            FolderBy.SITE -> name = "Youtube/$name"
+            FolderBy.NONE -> Unit
+        }
         return Result.success(name)
     }
 
     /** yt-dlp output template, relative to the download folder. */
-    fun toYtdlp(template: String, playlist: Boolean, folder: Boolean, numbered: Boolean, suffix: String = ""): String {
+    fun toYtdlp(template: String, playlist: Boolean, folder: Boolean, numbered: Boolean, suffix: String = "", folderBy: FolderBy = FolderBy.NONE): String {
         val t = if (validate(template) == null) template.trim() else "{title}"
         var out = PART.replace(t) { TOKENS.getValue(it.groupValues[1]).ytdlp } + suffix + ".%(ext)s"
         if (playlist && numbered) out = "%(playlist_index)03d - $out"
         if (playlist && folder) out = "%(playlist_title,playlist|Playlist).80B/$out"
+        when (folderBy) {
+            FolderBy.UPLOADER -> out = "%(uploader,channel|Unknown).60B/$out"
+            FolderBy.SITE -> out = "%(extractor_key|Other)s/$out"
+            FolderBy.NONE -> Unit
+        }
         return out
     }
 }

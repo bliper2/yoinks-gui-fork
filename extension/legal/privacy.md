@@ -16,13 +16,22 @@ Only the requests needed to do what you asked:
 - Requests to the website you are downloading from (for example YouTube or SoundCloud), made by yt-dlp.
 - For Spotify links: a request to Spotify's public page for that link (to read the song name, artist and cover), and a search on YouTube Music.
 - Once a week (you can turn this off in Settings), a check on GitHub for a newer version of yt-dlp.
-- Desktop app only (installed or portable): at start and every few hours, a check on GitHub for a newer version of Yoinks. The installed app downloads it in the background and asks before restarting.
+- Desktop app only (installed or portable): at start and every few hours, a check on GitHub for a newer version of Yoinks. The installed app downloads it in the background and asks before restarting. The portable app downloads the new portable file from GitHub into its own folder.
+- When you type words instead of a link, the words are sent to YouTube's search, through yt-dlp.
+- "Run health check" in Settings makes one small request to YouTube to test your connection.
 
 ## What is stored on your computer
 
 - Your settings, in `%APPDATA%\yoinks-gui\settings.json`.
 - Your list of recent downloads, inside your browser's extension storage (for the extension) or in the app's data folder (for the desktop app). "Clear history" in Settings deletes it. Your downloaded files are never deleted by Yoinks.
 - yt-dlp itself, in `%USERPROFILE%\.yoinks\bin`.
+- Installed Windows app only: so your browser can start the Yoinks helper, the app writes a small launcher file in its data folder and adds per-user registry entries for Chrome, Edge, Brave, Firefox and Waterfox. Uninstalling removes them.
+
+## Your files, clipboard and pages
+
+- **Convert files** (desktop app): the file stays on your PC; ffmpeg converts it locally and nothing is sent anywhere.
+- **Offer links I copy** (desktop app, off by default): when you return to Yoinks, it reads the clipboard once, only to offer a link. Nothing is stored or sent.
+- **Yoink all videos on this page** (extension): when you choose it from the right-click menu, the extension reads the links on that page, on your computer, to list the videos.
 
 ## Browser cookies
 
@@ -31,5 +40,5 @@ This is off unless you turn it on. When it is on, yt-dlp reads the login cookies
 ## Permissions the extension asks for
 
 - **Talk to the Yoinks helper** (native messaging): the extension cannot run yt-dlp itself, so a small helper program on your PC does the downloading.
-- **Access to YouTube, YouTube Music, SoundCloud, Bandcamp, TikTok, Instagram, X, Vimeo and Twitch**: only to show the Yoink button on their pages and to read where a video is playing (for clips).
+- **Access to YouTube, YouTube Music, SoundCloud, Bandcamp, TikTok, Instagram, X, Vimeo, Twitch, Reddit, Facebook, Dailymotion, Streamable and Rumble**: only to show the Yoink button on their pages and to read where a video is playing (for clips).
 - **Notifications**, **context menus** and **storage**: for "download finished" messages, the right-click menu, and remembering your recent downloads.

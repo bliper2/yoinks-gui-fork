@@ -1,0 +1,12 @@
+# Keep line endings stable no matter who commits from where.
+* text=auto
+*.bat text eol=crlf
+*.cmd text eol=crlf
+gradlew text eol=lf
+*.sh text eol=lf
+*.png binary
+*.ico binary
+*.jar binary
+*.exe binary
+*.apk binary
+*.xpi binary

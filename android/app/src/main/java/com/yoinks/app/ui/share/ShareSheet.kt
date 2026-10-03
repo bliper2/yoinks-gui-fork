@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -61,6 +62,8 @@ import com.yoinks.app.domain.model.FormatOption
 import com.yoinks.app.domain.model.LinkRules
 import com.yoinks.app.domain.model.MediaInfo
 import com.yoinks.app.domain.model.MediaKind
+import com.yoinks.app.domain.model.Platform
+import com.yoinks.app.domain.model.SearchResult
 import com.yoinks.app.domain.model.SpotifyLookup
 import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.ui.components.ActionState
@@ -74,10 +77,12 @@ import com.yoinks.app.ui.theme.YoinksTheme
 /** Callbacks from the sheet to [ShareViewModel]. */
 class SheetActions(
     val close: () -> Unit,
-    val download: (MediaInfo, FormatOption, Clip?) -> Unit,
+    val download: (MediaInfo, FormatOption, Clip?, List<Int>?, Boolean) -> Unit,
     val wholePlaylist: (String) -> Unit,
     val downloadSpotify: (String, SpotifyLookup, List<Int>) -> Unit,
     val retry: (String) -> Unit,
+    val pickResult: (String) -> Unit = {},
+    val copyDetails: (String?, YoinksError) -> Unit = { _, _ -> },
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +103,7 @@ fun ShareSheetContent(state: SheetState, actions: SheetActions, modifier: Modifi
             is SheetState.Working -> Working(state.status, actions.close)
             is SheetState.Media -> MediaOptions(state.info, actions)
             is SheetState.Spotify -> SpotifyMatches(state.url, state.lookup, actions)
+            is SheetState.Results -> Results(state.query, state.results, actions)
             is SheetState.Failed -> Failed(state.url, state.error, actions)
         }
     }
@@ -132,6 +138,11 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
     var end by rememberSaveable { mutableStateOf("") }
     var clipError by remember { mutableStateOf<String?>(null) }
     var button by remember { mutableStateOf<ActionState>(ActionState.Idle) }
+    var rememberSite by rememberSaveable { mutableStateOf(false) }
+    val picked = remember(info.url, info.entries.size) { mutableStateListOf(*Array(info.entries.size) { true }) }
+    var pickOpen by rememberSaveable { mutableStateOf(false) }
+    var pickError by remember { mutableStateOf<String?>(null) }
+    val canRememberSite = !info.isPlaylist && info.platform != Platform.OTHER && info.platform != Platform.SPOTIFY
 
     val subtitle = listOfNotNull(info.uploader, info.playlistCount?.let { "$it items" } ?: info.durationSeconds?.let(Formatters::duration)).joinToString(" · ")
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -147,6 +158,40 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
                     Text("Get the whole playlist instead")
                 }
             }
+        }
+        if (info.isPlaylist && info.entries.isNotEmpty()) {
+            item {
+                val count = picked.count { it }
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Button) { pickOpen = !pickOpen },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, contentDescription = null)
+                    Text("Choose videos: $count of ${info.entries.size}", modifier = Modifier.weight(1f))
+                    TextButton(onClick = { pickOpen = !pickOpen }) { Text(if (pickOpen) "Hide" else "Show") }
+                }
+            }
+            if (pickOpen) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { picked.indices.forEach { picked[it] = true }; pickError = null }) { Text("All") }
+                        TextButton(onClick = { picked.indices.forEach { picked[it] = false } }) { Text("None") }
+                    }
+                }
+                itemsIndexed(info.entries) { i, entry ->
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Checkbox) { picked[i] = !picked[i]; pickError = null },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Checkbox(checked = picked[i], onCheckedChange = null)
+                        Text("${i + 1}. ${entry.title}", modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                        entry.durationSeconds?.let { Text(Formatters.duration(it), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+                }
+            }
+            pickError?.let { item { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
         }
         item { Text("Quality", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp)) }
         item {
@@ -178,6 +223,18 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
                 }
             }
         }
+        if (canRememberSite) {
+            item {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(role = Role.Checkbox) { rememberSite = !rememberSite },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Checkbox(checked = rememberSite, onCheckedChange = null)
+                    Text("Use this quality for ${info.platform.displayName} from now on", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
         item {
             StateButton(
                 label = "Download",
@@ -194,8 +251,14 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
                             else -> Clip(s, e)
                         }
                     } else null
+                    var items: List<Int>? = null
+                    if (info.isPlaylist && info.entries.isNotEmpty()) {
+                        val chosen = picked.withIndex().filter { it.value }.map { it.index + 1 }
+                        if (chosen.isEmpty()) { pickError = "Choose at least one video."; pickOpen = true; return@StateButton }
+                        if (chosen.size < info.entries.size) items = chosen
+                    }
                     button = ActionState.Done
-                    actions.download(info, info.formats[selected.coerceIn(0, info.formats.lastIndex)], clip)
+                    actions.download(info, info.formats[selected.coerceIn(0, info.formats.lastIndex)], clip, items, rememberSite && canRememberSite)
                 },
             )
         }
@@ -310,8 +373,35 @@ private fun Failed(url: String?, error: YoinksError, actions: SheetActions) {
         Text(error.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (url != null && error.retryable) FilledTonalButton(onClick = { actions.retry(url) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Try again") }
+            TextButton(onClick = { actions.copyDetails(url, error) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Copy details") }
             TextButton(onClick = actions.close, modifier = Modifier.heightIn(min = 48.dp)) { Text("Close") }
         }
+    }
+}
+
+@Composable
+private fun Results(query: String, results: List<SearchResult>, actions: SheetActions) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Text("Results for “$query”", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 4.dp)) }
+        if (results.isEmpty()) item { Note("Nothing found. Try other words.") }
+        itemsIndexed(results) { _, result ->
+            Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { actions.pickResult(result.url) }) {
+                Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Thumbnail(result.thumbnail, false, 64.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(result.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            listOfNotNull(result.uploader, result.durationSeconds?.let(Formatters::duration)).joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+        item { TextButton(onClick = actions.close, modifier = Modifier.heightIn(min = 48.dp)) { Text("Close") } }
     }
 }
 
@@ -325,11 +415,19 @@ private fun Note(text: String) {
     }
 }
 
-private val previewActions = SheetActions({}, { _, _, _ -> }, {}, { _, _, _ -> }, {})
+private val previewActions = SheetActions({}, { _, _, _, _, _ -> }, {}, { _, _, _ -> }, {})
 
 @Preview(name = "Sheet – video", widthDp = 400, heightDp = 800, showBackground = true)
 @Composable
 internal fun MediaSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Media(PreviewData.media), previewActions) } }
+
+@Preview(name = "Sheet – playlist", widthDp = 400, heightDp = 800, showBackground = true)
+@Composable
+internal fun PlaylistSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Media(PreviewData.playlist), previewActions) } }
+
+@Preview(name = "Sheet – search", widthDp = 400, heightDp = 800, showBackground = true)
+@Composable
+internal fun SearchSheetPreview() = YoinksTheme { Surface { ShareSheetContent(SheetState.Results("lofi hip hop", PreviewData.searchResults), previewActions) } }
 
 @Preview(name = "Sheet – Spotify", widthDp = 400, heightDp = 800, showBackground = true)
 @Composable

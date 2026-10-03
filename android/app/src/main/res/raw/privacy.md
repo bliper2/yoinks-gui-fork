@@ -18,6 +18,9 @@ Only the requests needed to do what you asked:
 - For Spotify links: a request to Spotify's public page for that link, and a search on YouTube Music.
 - About once a week (you can change or turn this off in Settings): a check on GitHub for a newer yt-dlp.
 - Each time you open Yoinks: a check on GitHub for a newer version of Yoinks. The update is only downloaded and installed if you tap Update and Install.
+- When you type words instead of a link, the words are sent to YouTube's search, through yt-dlp.
+- "Run health check" in Settings makes one small request to YouTube to test your connection.
+- When a download finishes, its notification may show the video's picture, fetched from the site it came from.
 
 ## What is stored on your phone
 
@@ -28,6 +31,12 @@ Only the requests needed to do what you asked:
 ## Clipboard
 
 Off by default. If you turn on "Look for links on the clipboard", Yoinks reads the clipboard only while it is open on your screen, to offer a link you copied. Nothing is stored or sent.
+
+The "Yoink copied link" tile and the "Paste link" app shortcut read the clipboard once, only when you tap them, and only to download the link you copied.
+
+## Battery and Data Saver
+
+If you turn on "Wait while the battery is low" or "Respect Data Saver", Yoinks reads the battery level and Android's Data Saver state on this phone to decide when to start downloads. Nothing is sent anywhere.
 
 ## Permissions
 

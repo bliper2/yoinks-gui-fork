@@ -52,18 +52,25 @@
    * "Rick Astley - Never Gonna Give You Up.mp3". With playlist options the
    * folder and number are shown too.
    */
-  function preview(template, { ext = 'mp4', playlist = false, folder = true, numbered = true } = {}) {
+  function preview(template, { ext = 'mp4', playlist = false, folder = true, numbered = true, folderBy = 'none' } = {}) {
     const error = validate(template)
     if (error) return { error: `File name ${error}.` }
     const sample = Object.fromEntries(Object.entries(TOKENS).map(([k, v]) => [k, v.sample]))
     let name = `${render(template, sample)}.${ext}`
     if (playlist && numbered) name = `001 - ${name}`
     if (playlist && folder) name = `My Playlist\\${name}`
+    if (folderBy === 'uploader') name = `Rick Astley\\${name}`
+    else if (folderBy === 'site') name = `Youtube\\${name}`
     return { name }
   }
 
   /** yt-dlp output template (relative to the download folder). */
-  function toYtdlp(template, { playlist = false, folder = true, numbered = true } = {}) {
+  const FOLDER_BY = {
+    uploader: '%(uploader,channel|Unknown).60B',
+    site: '%(extractor_key|Other)s',
+  }
+
+  function toYtdlp(template, { playlist = false, folder = true, numbered = true, folderBy = 'none' } = {}) {
     const error = validate(template)
     // Settings are validated on write; fall back to the default if a stale
     // value slips through rather than passing junk to yt-dlp.
@@ -71,6 +78,7 @@
     let out = t.replace(PART, (_, name) => TOKENS[name].ytdlp) + '.%(ext)s'
     if (playlist && numbered) out = `%(playlist_index)03d - ${out}`
     if (playlist && folder) out = `%(playlist_title,playlist|Playlist).80B/${out}`
+    if (FOLDER_BY[folderBy]) out = `${FOLDER_BY[folderBy]}/${out}`
     return out
   }
 

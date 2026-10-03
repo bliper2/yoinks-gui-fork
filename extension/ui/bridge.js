@@ -69,6 +69,10 @@
       activeTab: async () => null,
       currentTime: async () => null,
       window: { minimize: api.minimize, close: api.close },
+      pathOf: api.pathOf,
+      onClipboard: api.onClipboard,
+      extensionInfo: api.extensionInfo,
+      openPath: api.openPath,
       version: api.version,
     }
   }

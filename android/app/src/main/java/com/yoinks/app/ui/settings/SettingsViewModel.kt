@@ -6,7 +6,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yoinks.app.data.cookies.CookieStore
+import com.yoinks.app.BuildConfig
+import com.yoinks.app.data.health.HealthCheck
 import com.yoinks.app.data.history.HistoryRepository
+import com.yoinks.app.domain.health.HealthItem
 import com.yoinks.app.data.settings.SettingsRepository
 import com.yoinks.app.domain.engine.MediaEngine
 import com.yoinks.app.domain.errors.ErrorTranslator
@@ -24,6 +27,8 @@ import javax.inject.Inject
 
 data class YtDlpState(val version: String? = null, val busy: Boolean = false)
 
+data class HealthUi(val busy: Boolean = false, val items: List<HealthItem> = emptyList())
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -31,7 +36,22 @@ class SettingsViewModel @Inject constructor(
     private val engine: MediaEngine,
     private val cookies: CookieStore,
     private val history: HistoryRepository,
+    private val healthCheck: HealthCheck,
 ) : ViewModel() {
+    private val _health = MutableStateFlow(HealthUi())
+    val health: StateFlow<HealthUi> = _health.asStateFlow()
+
+    fun runHealth() = viewModelScope.launch {
+        _health.value = _health.value.copy(busy = true)
+        _health.value = HealthUi(busy = false, items = healthCheck.run())
+    }
+
+    /** The results as text to paste into Discord or a GitHub issue. */
+    fun healthText(): String = buildString {
+        appendLine("Yoinks ${BuildConfig.VERSION_NAME} (Android) health check")
+        _health.value.items.forEach { appendLine("${it.status.name}  ${it.label}: ${it.detail}") }
+    }.trim()
+
     val settings: StateFlow<AppSettings> = repo.settings
 
     private val _errors = MutableStateFlow<Map<String, String>>(emptyMap())

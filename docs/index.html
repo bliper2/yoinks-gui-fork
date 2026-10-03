@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yoinks: save videos and music</title>
+<meta name="description" content="Yoinks saves videos and music from YouTube, TikTok, Instagram, SoundCloud, Spotify links and 1,800+ other sites. Windows app, browser extension and Android app. Free, no ads, no tracking.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #f6f7fb; --card: #ffffff; --text: #141925; --muted: #525c70; --border: rgba(15, 23, 42, .12);
+    --accent: #8b6bff; --accent2: #22d3ee; --on-accent: #ffffff;
+    --grad: linear-gradient(120deg, var(--accent), var(--accent2));
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e1015; --card: #161920; --text: #e8edf4; --muted: #9aa3b5; --border: rgba(255, 255, 255, .1); }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 18px 0; display: flex; align-items: center; gap: 12px; }
+  header img { width: 36px; height: 36px; }
+  header strong { font-size: 20px; }
+  header nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  header nav a { text-decoration: none; }
+  header nav a:hover { color: var(--text); }
+  .hero { text-align: center; padding: 48px 0 28px; }
+  .hero img.logo { width: 96px; height: 96px; }
+  h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.1; margin: 16px 0 12px; letter-spacing: -.02em; }
+  .hero p { max-width: 640px; margin: 0 auto; color: var(--muted); font-size: 18px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 28px 0 8px; }
+  .btn { display: inline-flex; flex-direction: column; align-items: center; padding: 12px 22px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); text-decoration: none; min-width: 200px; }
+  .btn.primary { background: var(--grad); color: var(--on-accent); border-color: transparent; }
+  .btn b { font-size: 16px; }
+  .btn small { opacity: .8; font-size: 12.5px; }
+  .note { text-align: center; color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+  section { padding: 34px 0; }
+  h2 { font-size: 26px; margin: 0 0 18px; letter-spacing: -.01em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .shots { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+  .shots img { height: 420px; border-radius: 12px; border: 1px solid var(--border); flex: none; }
+  footer { padding: 30px 0 50px; color: var(--muted); font-size: 14px; text-align: center; }
+  footer a { margin: 0 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="logo.svg" alt="">
+    <strong>Yoinks</strong>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#screens">Screenshots</a>
+      <a href="https://github.com/bliper2/yoinks-gui-fork">GitHub</a>
+      <a href="https://discord.gg/yEF99JeG9b">Discord</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <img class="logo" src="logo.svg" alt="Yoinks logo">
+    <h1>Save videos and music from almost anywhere</h1>
+    <p>YouTube, TikTok, Instagram, SoundCloud, X and over 1,800 other sites, plus Spotify links. A Windows app, a browser extension and an Android app. Free, no ads, no tracking, no accounts.</p>
+    <div class="buttons">
+      <a class="btn primary" id="main-download" href="https://github.com/bliper2/yoinks-gui-fork/releases/latest"><b>Download</b><small id="main-note">Latest version</small></a>
+      <a class="btn" id="alt-download" href="https://github.com/bliper2/yoinks-gui-fork/releases/latest"><b>All downloads</b><small>Windows, extension, Android</small></a>
+    </div>
+    <p class="note" id="version-note">Windows builds are not code-signed yet: if SmartScreen warns, choose More info, then Run anyway.</p>
+  </div>
+
+  <section id="features">
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card"><h3>Paste, pick, done</h3><p>Paste a link or type words to search, choose a quality or audio only, and it downloads. Presets and remembered qualities make it one click.</p></div>
+      <div class="card"><h3>Buttons on the page</h3><p>The extension puts a Yoink button next to Like and Share on YouTube, YouTube Music, SoundCloud, TikTok and more, and can grab every video on a page.</p></div>
+      <div class="card"><h3>Spotify links</h3><p>Yoinks finds each song on YouTube Music, shows how sure it is, and saves it with Spotify's title, artist, album and cover. Nothing is taken from Spotify.</p></div>
+      <div class="card"><h3>Playlists and albums</h3><p>Tick just the videos you want, keep them in their own folder, numbered, or split a long video by its chapters.</p></div>
+      <div class="card"><h3>On your phone</h3><p>Share a link from TikTok, Instagram or YouTube to Yoinks and it downloads in the background, with a quick tile for the link you just copied.</p></div>
+      <div class="card"><h3>Private by design</h3><p>No servers, no tracking. It only talks to the sites you download from and to GitHub for updates. <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/SECURITY.md">How it stays safe</a>.</p></div>
+      <div class="card"><h3>Looks the way you want</h3><p>Four styles (Clean, Playful, Neon, Classic), light or dark, your accent color and a floating navigation bar.</p></div>
+      <div class="card"><h3>Convert your own files</h3><p>On Windows, drop a video or audio file and turn it into MP3, M4A, FLAC, Opus or MP4.</p></div>
+      <div class="card"><h3>Keeps itself working</h3><p>yt-dlp and the apps update themselves, and a health check tells you what is wrong if something stops.</p></div>
+    </div>
+  </section>
+
+  <section id="screens">
+    <h2>Screenshots</h2>
+    <div class="shots">
+      <img src="screenshots/desktop-formats.png" alt="Choosing a quality in the Windows app">
+      <img src="screenshots/desktop-search.png" alt="Searching YouTube from the Windows app">
+      <img src="screenshots/desktop-queue.png" alt="The download queue">
+      <img src="screenshots/android-share-sheet.png" alt="The Android share sheet">
+      <img src="screenshots/android-playlist.png" alt="Choosing videos of a playlist on Android">
+      <img src="screenshots/extension-youtube.png" alt="The Yoink button on YouTube">
+    </div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/bliper2/yoinks-gui-fork/releases/latest">Releases</a>
+    <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/CHANGELOG.md">Changelog</a>
+    <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/docs/KNOWN-ISSUES.md">Help</a>
+    <a href="https://discord.gg/yEF99JeG9b">Discord</a>
+    <p>Only download what you have the right to keep. Built on yt-dlp and ffmpeg. Windows app and extension: MIT. Android app: GPL-3.0.</p>
+  </footer>
+</div>
+
+<script>
+// Point the big button at the right file for this visitor's device. If anything
+// fails, the buttons keep linking to the Releases page.
+;(async () => {
+  try {
+    const release = await (await fetch('https://api.github.com/repos/bliper2/yoinks-gui-fork/releases/latest')).json()
+    const find = pattern => release.assets.find(asset => pattern.test(asset.name))?.browser_download_url
+    const version = String(release.tag_name || '').replace(/^v/, '')
+    const ua = navigator.userAgent
+    const android = /Android/i.test(ua)
+    const windows = /Windows/i.test(ua)
+    const main = document.getElementById('main-download')
+    const note = document.getElementById('main-note')
+    if (android) {
+      const arm64 = /arm64|aarch64/i.test(ua) || !/armv7|armeabi/i.test(ua)
+      const url = find(arm64 ? /android-.*arm64-v8a\.apk$/ : /android-.*armeabi-v7a\.apk$/) || find(/android-.*universal\.apk$/)
+      if (url) { main.href = url; main.querySelector('b').textContent = 'Download for Android'; note.textContent = `Version ${version}, an APK file` }
+    } else if (windows) {
+      const url = find(/x64-setup\.exe$/)
+      if (url) { main.href = url; main.querySelector('b').textContent = 'Download for Windows'; note.textContent = `Version ${version}, installer` }
+    } else if (version) note.textContent = `Version ${version}`
+  } catch {
+    // keep the Releases link
+  }
+})()
+</script>
+</body>
+</html>

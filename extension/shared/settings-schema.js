@@ -62,6 +62,12 @@
     ['top', 'Top'],
     ['bottom', 'Floating bottom'],
   ]
+  const MAX_PRESETS = 12
+  const FOLDER_BY = [
+    ['none', 'No extra folder'],
+    ['uploader', 'Uploader or channel'],
+    ['site', 'Website'],
+  ]
   const ACCENTS = [
     ['violet', 'Violet'],
     ['ocean', 'Ocean'],
@@ -78,6 +84,8 @@
     { key: 'defaultFormat', section: 'Downloads', type: 'select', options: FORMATS, default: 'best', label: 'Default format', help: 'Highlighted in the format list and used for batch and quick downloads.' },
     { key: 'alwaysUseFormat', section: 'Downloads', type: 'toggle', default: false, label: 'Always use the default format', help: 'Skip the format list and start downloading right away.' },
     { key: 'filenameTemplate', section: 'Downloads', type: 'template', default: '{title}', label: 'File name', help: 'Use {title}, {artist}, {album}, {track}, {uploader}, {date}, {year}, {id}.' },
+    { key: 'folderBy', section: 'Downloads', type: 'select', options: FOLDER_BY, default: 'none', label: 'Sort into folders by', help: 'Puts each file in a folder named after its uploader or website.' },
+    { key: 'clipboardWatch', section: 'Downloads', type: 'toggle', default: false, only: 'desktop', label: 'Offer links I copy', help: 'When you come back to Yoinks, a copied link is put in the link box.' },
 
     { key: 'audioFormat', section: 'Audio', type: 'select', options: AUDIO_FORMATS, default: 'mp3', label: 'Audio format' },
     { key: 'audioBitrate', section: 'Audio', type: 'select', options: BITRATES, default: 'best', label: 'Bitrate', help: 'Ignored for FLAC, which is lossless.' },
@@ -85,6 +93,7 @@
     { key: 'embedMetadata', section: 'Tags', type: 'toggle', default: true, label: 'Save title, artist, album and chapters' },
     { key: 'embedThumbnail', section: 'Tags', type: 'toggle', default: true, label: 'Add cover art' },
     { key: 'embedSubs', section: 'Tags', type: 'toggle', default: false, label: 'Add subtitles to videos' },
+    { key: 'splitChapters', section: 'Tags', type: 'toggle', default: false, label: 'Also split videos with chapters into one file per chapter', help: 'Good for albums and mixes. The full file is kept too.' },
     { key: 'subsLang', section: 'Tags', type: 'text', default: 'en', label: 'Subtitle language', help: 'A language code like en, de or pt-BR.', maxLength: 10 },
 
     { key: 'playlistFolder', section: 'Playlists', type: 'toggle', default: true, label: 'Save playlists and albums in their own folder' },
@@ -94,6 +103,10 @@
     { key: 'speedLimit', section: 'Queue', type: 'number', min: 0, max: 1000, step: 0.5, default: 0, label: 'Speed limit per download (MB/s)', help: '0 means no limit.' },
     { key: 'retries', section: 'Queue', type: 'number', min: 0, max: 10, step: 1, default: 2, label: 'Retry failed downloads', help: 'How many times to try again after a network error.' },
     { key: 'notifications', section: 'Queue', type: 'toggle', default: true, label: 'Show a notification when a download finishes or fails' },
+    { key: 'confirmClose', section: 'Queue', type: 'toggle', default: true, only: 'desktop', label: 'Ask before closing while downloads are running' },
+    { key: 'scheduleOn', section: 'Queue', type: 'toggle', default: false, only: 'desktop', label: 'Only download between set times', help: 'Waiting downloads start when the window opens. Running ones are not interrupted.' },
+    { key: 'scheduleFrom', section: 'Queue', type: 'time', default: '01:00', only: 'desktop', label: 'Start at' },
+    { key: 'scheduleTo', section: 'Queue', type: 'time', default: '07:00', only: 'desktop', label: 'Stop starting new downloads at' },
 
     { key: 'ytdlpAutoUpdate', section: 'yt-dlp', type: 'toggle', default: true, label: 'Keep yt-dlp up to date (checks weekly)' },
     { key: 'cookiesFromBrowser', section: 'yt-dlp', type: 'select', options: COOKIE_BROWSERS, default: 'off', label: 'Use browser cookies', help: 'For age-restricted or members-only videos.' },
@@ -105,12 +118,19 @@
     { key: 'customAccent', section: 'Look', type: 'color', default: '#8b6bff', label: 'Custom color', hidden: true },
 
     { key: 'termsAccepted', type: 'number', min: 0, max: 1000, step: 1, default: 0, hidden: true },
+    // Version whose "what's new" the user has seen; '' on a fresh install.
+    { key: 'lastSeenVersion', type: 'text', default: '', maxLength: 20, hidden: true },
+    // Remembered quality per website: { youtube: '720', soundcloud: 'audio' }.
+    { key: 'siteFormats', type: 'map', default: {}, hidden: true },
+    // Named combinations: [{ id, name, format, audioFormat ('' = your default), embedSubs, embedThumbnail }].
+    { key: 'presets', type: 'presets', default: [], hidden: true },
   ]
 
   const BY_KEY = Object.fromEntries(FIELDS.map(field => [field.key, field]))
 
   function defaults() {
-    return Object.fromEntries(FIELDS.map(field => [field.key, field.default]))
+    const copy = value => (Array.isArray(value) ? [...value] : typeof value === 'object' ? { ...value } : value)
+    return Object.fromEntries(FIELDS.map(field => [field.key, copy(field.default)]))
   }
 
   // Returns [value, error]. Values from files and other processes are
@@ -141,7 +161,38 @@
         const error = typeof value === 'string' ? templateModule().validate(value) : 'must be text'
         return error ? [field.default, error] : [value.trim()]
       }
+      case 'time':
+        return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? [value] : [field.default, 'must be a time like 07:30']
+      case 'presets': {
+        if (!Array.isArray(value) || value.length > MAX_PRESETS) return [[], 'is not a list of presets']
+        const clean = []
+        for (const item of value) {
+          const ok =
+            item &&
+            typeof item === 'object' &&
+            /^[a-z0-9]{1,12}$/.test(item.id) &&
+            typeof item.name === 'string' &&
+            item.name.trim().length >= 1 &&
+            item.name.length <= 24 &&
+            !/[\u0000-\u001f]/.test(item.name) &&
+            FORMATS.some(([key]) => key === item.format) &&
+            (item.audioFormat === '' || AUDIO_FORMATS.some(([key]) => key === item.audioFormat)) &&
+            typeof item.embedSubs === 'boolean' &&
+            typeof item.embedThumbnail === 'boolean'
+          if (!ok) return [[], 'has a preset that is not valid']
+          clean.push({ id: item.id, name: item.name.trim(), format: item.format, audioFormat: item.audioFormat, embedSubs: item.embedSubs, embedThumbnail: item.embedThumbnail })
+        }
+        return [clean]
+      }
+      case 'map': {
+        const entries = value && typeof value === 'object' && !Array.isArray(value) ? Object.entries(value) : null
+        const ok = entries && entries.length <= 40 && entries.every(([site, format]) => /^[a-z0-9-]{1,30}$/.test(site) && FORMATS.some(([key]) => key === format))
+        return ok ? [Object.fromEntries(entries)] : [{}, 'is not a list of sites and formats']
+      }
       case 'text':
+        if (field.key === 'lastSeenVersion') {
+          return typeof value === 'string' && /^[0-9A-Za-z.\-]{0,20}$/.test(value) ? [value] : [field.default, 'is not a version']
+        }
         if (field.key === 'subsLang') {
           return typeof value === 'string' && /^([a-z]{2,3}(-[A-Za-z0-9]{2,4})?|all)$/.test(value.trim())
             ? [value.trim()]
@@ -185,5 +236,5 @@
     return validate(stored ?? {}, defaults()).settings
   }
 
-  return { TERMS_VERSION, FIELDS, BY_KEY, FORMATS, AUDIO_FORMATS, COOKIE_BROWSERS, defaults, validate, sanitize }
+  return { TERMS_VERSION, FIELDS, BY_KEY, FORMATS, AUDIO_FORMATS, COOKIE_BROWSERS, FOLDER_BY, MAX_PRESETS, defaults, validate, sanitize }
 })

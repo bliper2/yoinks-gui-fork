@@ -8,7 +8,7 @@
 
 // Chrome/Brave/Edge run this as a service worker and load the shared scripts
 // here; Firefox/Waterfox load them first from manifest background.scripts.
-if (typeof importScripts === 'function') importScripts('shared/settings-schema.js', 'shared/filename-template.js', 'shared/formats.js', 'shared/sites.js', 'shared/controller.js')
+if (typeof importScripts === 'function') importScripts('shared/settings-schema.js', 'shared/filename-template.js', 'shared/formats.js', 'shared/sites.js', 'shared/schedule.js', 'shared/controller.js')
 
 const HOST_NAME = 'com.yoinks.host'
 
@@ -170,12 +170,31 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     chrome.contextMenus.create({ id: 'yoink-link', title: 'Yoink link…', contexts: ['link'] })
     chrome.contextMenus.create({ id: 'yoink-link-audio', title: 'Yoink link as audio', contexts: ['link'] })
     chrome.contextMenus.create({ id: 'yoink-page', title: 'Yoink this page…', contexts: ['page', 'video', 'audio'] })
+    chrome.contextMenus.create({ id: 'yoink-bulk', title: 'Yoink all videos on this page…', contexts: ['page'] })
   })
   // First run: show the terms (and settings) once.
   if (reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('app.html?view=terms') })
 })
 
+// Collect every video link on the page and show them in the batch view.
+async function yoinkAllOnPage(tab) {
+  let reply = null
+  try {
+    reply = await chrome.tabs.sendMessage(tab.id, { type: 'collectLinks' })
+  } catch {
+    // no content script here (a site Yoinks does not button-ize)
+  }
+  const urls = reply?.urls ?? []
+  if (!urls.length) {
+    notify({ id: `bulk-${Date.now()}`, title: 'Yoinks', message: 'No videos were found on this page. Scroll down so more of them load, or open a channel, playlist or search page.', target: null })
+    return
+  }
+  await controller.command({ type: 'prefill', text: urls.join('\n') })
+  chrome.tabs.create({ url: chrome.runtime.getURL('app.html?view=batch') })
+}
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'yoink-bulk') return tab && yoinkAllOnPage(tab)
   const url = info.menuItemId === 'yoink-page' ? info.pageUrl : info.linkUrl
   if (!/^https?:/.test(url ?? '')) return
   const source = tab?.id >= 0 ? { tabId: tab.id } : null

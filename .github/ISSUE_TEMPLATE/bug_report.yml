@@ -1,0 +1,53 @@
+name: Bug report
+description: Something does not work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. The fastest way to a fix: use **Copy details** on the error (or **Settings, Health check, Copy results**) and paste it below.
+        Questions or "how do I"? The [Discord](https://discord.gg/yEF99JeG9b) is quicker.
+  - type: dropdown
+    id: app
+    attributes:
+      label: Which app?
+      options:
+        - Windows app (installer)
+        - Windows app (portable)
+        - Browser extension (Brave, Chrome, Edge)
+        - Browser extension (Firefox, Waterfox)
+        - Android app
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Yoinks version
+      description: Settings, About (for example 2.2.0)
+      placeholder: "2.2.0"
+    validations:
+      required: true
+  - type: input
+    id: link
+    attributes:
+      label: The link that failed
+      description: Leave it out if it is private. Does it work in another app or in yt-dlp itself?
+      placeholder: "https://..."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: The steps you took and any message you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Paste the result of **Copy details** or the health check here.
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag pictures here if they help.

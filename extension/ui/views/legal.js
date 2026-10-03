@@ -25,8 +25,11 @@
       'article',
       { class: 'card legal' },
       body,
-      h('p', { class: 'legal-links' }, button({ icon: other === 'privacy' ? 'info' : 'file', text: other === 'privacy' ? 'Read the Privacy notice' : 'Read the Terms of use', variant: 'link', onClick: () => ctx.go(other) })),
-      gate,
+      // The changelog ("what's new") is not a legal page: no links, no gate.
+      name === 'changelog'
+        ? button({ icon: 'back', text: 'Back', variant: 'ghost', onClick: () => ctx.go('home') })
+        : h('p', { class: 'legal-links' }, button({ icon: other === 'privacy' ? 'info' : 'file', text: other === 'privacy' ? 'Read the Privacy notice' : 'Read the Terms of use', variant: 'link', onClick: () => ctx.go(other) })),
+      name === 'changelog' ? null : gate,
     )
 
     bridge

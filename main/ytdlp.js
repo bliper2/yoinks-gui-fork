@@ -215,17 +215,22 @@ async function updateNow(onStatus = () => {}) {
  * because nothing inside app.asar can be executed.
  */
 async function findFfmpeg() {
+  return (await ffmpegInfo()).path
+}
+
+/** { path, where } where `where` is 'bundled' | 'system' | 'package' | null (none found). */
+async function ffmpegInfo() {
   const exe = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg'
   const shipped = [process.resourcesPath && path.join(process.resourcesPath, exe), path.join(__dirname, '..', exe)].filter(Boolean)
-  for (const bundled of shipped) if (await commandWorks(bundled, ['-version'])) return bundled
-  if (await commandWorks('ffmpeg', ['-version'])) return undefined // on PATH, yt-dlp finds it itself
+  for (const bundled of shipped) if (await commandWorks(bundled, ['-version'])) return { path: bundled, where: 'bundled' }
+  if (await commandWorks('ffmpeg', ['-version'])) return { path: undefined, where: 'system' } // on PATH, yt-dlp finds it itself
   try {
     const ffmpegPath = require('ffmpeg-static')
-    if (ffmpegPath && (await commandWorks(ffmpegPath, ['-version']))) return ffmpegPath
+    if (ffmpegPath && (await commandWorks(ffmpegPath, ['-version']))) return { path: ffmpegPath, where: 'package' }
   } catch {
     // ffmpeg-static not installed or unsupported platform
   }
-  return undefined
+  return { path: undefined, where: null }
 }
 
 // ---------- probe ----------
@@ -289,6 +294,101 @@ async function searchMusic(ytdlp, query, { limit = 4, signal, settings } = {}) {
       album: entry.album ?? null,
       duration: entry.duration ?? null,
     }))
+}
+
+/**
+ * Videos matching a text search on YouTube: [{ title, uploader, duration, url, thumbnail }].
+ * The text goes after "--" inside a ytsearch URL, so it can never be an option.
+ */
+async function searchVideos(ytdlp, query, { limit = 8, signal, settings } = {}) {
+  const text = String(query ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200)
+  if (!text) throw new YoinksError({ code: 'bad-request', message: 'Type something to search for.' })
+  const result = await run(ytdlp, [...UTF8, '-J', '--flat-playlist', '--no-warnings', ...cookieArgs(settings), '--', `ytsearch${limit}:${text}`], { signal })
+  if (result.code !== 0) throw fromYtdlp(result.stderr, 'The search failed.')
+  let info
+  try {
+    info = JSON.parse(result.stdout)
+  } catch {
+    throw new YoinksError({ code: 'unknown', message: 'Could not read the search results.', retryable: true })
+  }
+  return (info.entries ?? [])
+    .filter(entry => entry?.id)
+    .map(entry => ({
+      title: entry.title ?? 'Untitled',
+      uploader: entry.uploader ?? entry.channel ?? null,
+      duration: entry.duration ?? null,
+      url: /^https:\/\//.test(entry.url ?? '') ? entry.url : `https://www.youtube.com/watch?v=${entry.id}`,
+      thumbnail: (entry.thumbnails ?? []).map(t => t?.url).filter(u => typeof u === 'string' && u.startsWith('https://')).at(-1) ?? null,
+    }))
+}
+
+// ---------- convert a local file ----------
+
+const CONVERT_TARGETS = {
+  mp3: { ext: 'mp3', args: ['-vn', '-c:a', 'libmp3lame', '-q:a', '0'] },
+  m4a: { ext: 'm4a', args: ['-vn', '-c:a', 'aac', '-b:a', '256k'] },
+  flac: { ext: 'flac', args: ['-vn', '-c:a', 'flac'] },
+  opus: { ext: 'opus', args: ['-vn', '-c:a', 'libopus', '-b:a', '160k'] },
+  mp4: { ext: 'mp4', args: ['-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart'] },
+}
+function lastLines(text, n = 3) {
+  return text
+    .split(/\r?\n/)
+    .filter(line => line.trim())
+    .slice(-n)
+    .join(' ')
+}
+
+const CONVERTIBLE = new Set(['.mp4', '.mkv', '.webm', '.mov', '.m4v', '.avi', '.flv', '.mp3', '.m4a', '.opus', '.ogg', '.wav', '.flac', '.aac', '.wma'])
+
+/**
+ * Convert a local media file with ffmpeg into `outDir`, next to nothing else
+ * of ours. Resolves the new file's path; rejects a YoinksError.
+ * onProgress({ downloadedBytes, totalBytes }) carries microseconds done / total.
+ */
+function convertFile({ ffmpeg, input, outDir, target, onProgress, signal }) {
+  const spec = CONVERT_TARGETS[target]
+  if (!spec) return Promise.reject(new YoinksError({ code: 'bad-request', message: 'Pick a format to convert to.' }))
+  const base = path.basename(input, path.extname(input))
+  let output = path.join(outDir, `${base}.${spec.ext}`)
+  for (let n = 1; require('node:fs').existsSync(output) || output === input; n++) output = path.join(outDir, `${base} (${n}).${spec.ext}`)
+  const args = ['-hide_banner', '-nostdin', '-n', '-i', input, ...spec.args, '-progress', 'pipe:1', '-nostats', output]
+  return new Promise((resolve, reject) => {
+    let child
+    try {
+      child = spawnKillable(ffmpeg ?? 'ffmpeg', args, { signal })
+    } catch {
+      reject(new YoinksError({ code: 'cancelled', message: 'Conversion cancelled.' }))
+      return
+    }
+    activeChildren.add(child)
+    let total = null
+    let stderr = ''
+    child.stderr.setEncoding('utf8')
+    child.stdout.setEncoding('utf8')
+    child.stderr.on('data', chunk => {
+      stderr += chunk
+      if (total === null) {
+        const m = /Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderr)
+        if (m) total = (Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])) * 1_000_000
+      }
+    })
+    child.stdout.on('data', chunk => {
+      const m = /out_time_us=(\d+)/g
+      let last = null
+      for (let x = m.exec(chunk); x; x = m.exec(chunk)) last = Number(x[1])
+      if (last !== null) onProgress?.({ downloadedBytes: last, totalBytes: total ?? undefined })
+    })
+    child.on('error', err => reject(err.code === 'ENOENT' ? new YoinksError(Errors.friendly('ffmpeg not found')) : fromYtdlp(err.message)))
+    child.on('close', code => {
+      activeChildren.delete(child)
+      if (signal?.aborted) {
+        require('node:fs').rm(output, { force: true }, () => {})
+        reject(new YoinksError({ code: 'cancelled', message: 'Conversion cancelled.' }))
+      } else if (code === 0) resolve(output)
+      else reject(new YoinksError(Errors.friendly(lastLines(stderr) || 'The conversion failed.')))
+    })
+  })
 }
 
 // ---------- format choices ----------
@@ -377,8 +477,9 @@ function formatArgs(choice, settings) {
  * @param {{start:number,end:number|null}} [p.clip]
  * @param {string[]} [p.siteArgs] per-site extras from shared/sites.js
  * @param {boolean} [p.forceTags] always embed tags + cover (Spotify)
+ * @param {number[]|null} [p.items] playlist entries to take (1-based); null = all
  */
-function buildArgs({ choice, settings, outDir, playlist = false, music = false, clip = null, siteArgs = [], forceTags = false }) {
+function buildArgs({ choice, settings, outDir, playlist = false, music = false, clip = null, siteArgs = [], forceTags = false, items = null }) {
   const args = [...formatArgs(choice, settings)]
   const isAudio = choice.kind === 'audio'
 
@@ -394,9 +495,14 @@ function buildArgs({ choice, settings, outDir, playlist = false, music = false, 
     args.push('--embed-subs', '--sub-langs', langs)
   }
   if (settings.speedLimit > 0) args.push('--limit-rate', `${settings.speedLimit}M`)
+  if (playlist && items?.length) args.push('--playlist-items', items.join(','))
+  if (settings.splitChapters && !clip) {
+    // One file per chapter in a folder next to the full file.
+    args.push('--split-chapters', '-o', `chapter:${path.join(outDir, '%(title).100B', '%(section_number)03d - %(section_title).100B.%(ext)s')}`)
+  }
   args.push(...cookieArgs(settings), ...siteArgs)
 
-  let template = Template.toYtdlp(settings.filenameTemplate, { playlist, folder: settings.playlistFolder, numbered: settings.playlistNumbered })
+  let template = Template.toYtdlp(settings.filenameTemplate, { playlist, folder: settings.playlistFolder, numbered: settings.playlistNumbered, folderBy: settings.folderBy })
   if (clip) template = template.replace(/\.%\(ext\)s$/, ` (clip ${clockLabel(clip.start)}-${clip.end === null ? 'end' : clockLabel(clip.end)}).%(ext)s`)
   args.push('-o', path.join(outDir, template))
   return args
@@ -548,9 +654,14 @@ module.exports = {
   versionInfo,
   updateNow,
   findFfmpeg,
+  ffmpegInfo,
   probe,
   writeInfoJson,
   searchMusic,
+  searchVideos,
+  convertFile,
+  CONVERT_TARGETS,
+  CONVERTIBLE,
   buildChoices,
   pickChoice,
   buildArgs,

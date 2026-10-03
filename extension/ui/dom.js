@@ -36,6 +36,10 @@
     link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
     file: 'M6 3.5h8l4 4v13H6zM14 3.5v4h4',
     skip: 'M6 6l7 6-7 6zM16 6v12',
+    search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5L21 21',
+    copy: 'M9 9h11v11H9zM5 15V4h10',
+    health: 'M4 12h4l2-5 4 10 2-5h4',
+    swap: 'M4 8h13l-3-3.5M20 16H7l3 3.5',
   }
 
   function icon(name, { size = 18, label } = {}) {
@@ -145,5 +149,43 @@
     return new Date(ms).toLocaleDateString()
   }
 
-  root.YoinksDom = { h, icon, button, formatDuration, formatBytes, shortenPath, filenameOf, parseTime, timeAgo }
+  // ---------- support helpers ----------
+
+  /** Copy text to the clipboard (works in popups, tabs and the desktop window). */
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      const area = document.createElement('textarea')
+      area.value = text
+      area.style.position = 'fixed'
+      area.style.opacity = '0'
+      document.body.append(area)
+      area.select()
+      const ok = document.execCommand('copy')
+      area.remove()
+      return ok
+    }
+  }
+
+  /**
+   * A short report to paste into Discord or a GitHub issue. Only what is
+   * needed to find the problem: versions, the link and the error. No settings,
+   * no file names, no cookies.
+   */
+  function debugReport({ bridge, view, job }) {
+    const where = bridge.platform === 'desktop' ? 'Windows app' : 'browser extension'
+    return [
+      `Yoinks ${bridge.version ?? '?'} (${where})`,
+      `yt-dlp: ${view?.ytdlp?.version ?? 'unknown'}`,
+      `Link: ${job?.url ?? '-'}`,
+      `Error: ${job?.error?.code ?? 'unknown'} - ${job?.error?.message ?? 'no message'}`,
+      job?.error?.detail ? `Details: ${job.error.detail}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+
+  root.YoinksDom = { h, icon, button, formatDuration, formatBytes, shortenPath, filenameOf, parseTime, timeAgo, copyText, debugReport }
 })(typeof self !== 'undefined' ? self : this)

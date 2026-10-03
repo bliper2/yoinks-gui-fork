@@ -47,11 +47,30 @@ import com.yoinks.app.ui.components.Thumbnail
 import com.yoinks.app.ui.format.Formatters
 import com.yoinks.app.ui.preview.PreviewData
 import com.yoinks.app.ui.theme.YoinksTheme
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import com.yoinks.app.BuildConfig
+import com.yoinks.app.domain.engine.MediaEngine
+import com.yoinks.app.domain.support.DebugReport
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class QueueViewModel @Inject constructor(val queue: DownloadQueue) : ViewModel()
+class QueueViewModel @Inject constructor(val queue: DownloadQueue, private val engine: MediaEngine) : ViewModel() {
+    /** The report behind "Copy details" for a failed download. */
+    suspend fun debugReport(job: DownloadJob): String = DebugReport.build(
+        appVersion = BuildConfig.VERSION_NAME,
+        device = "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT}), ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+        ytdlpVersion = runCatching { engine.version() }.getOrNull(),
+        url = job.request.url,
+        code = job.error?.code ?: "unknown",
+        message = job.error?.message ?: "no message",
+        detail = job.error?.detail.orEmpty(),
+    )
+}
 
 /** Callbacks for queue rows. */
 class QueueActions(
@@ -63,13 +82,19 @@ class QueueActions(
     val resumeAll: () -> Unit,
     val clearFailed: () -> Unit,
     val select: (DownloadJob) -> Unit,
+    val copyDetails: (DownloadJob) -> Unit = {},
 )
 
 @Composable
-fun rememberQueueActions(vm: QueueViewModel, onSelect: (DownloadJob) -> Unit): QueueActions = QueueActions(
-    vm.queue::pause, vm.queue::resume, vm.queue::cancel, vm.queue::retry,
-    vm.queue::pauseAll, vm.queue::resumeAll, vm.queue::clearFailed, onSelect,
-)
+fun rememberQueueActions(vm: QueueViewModel, onSelect: (DownloadJob) -> Unit): QueueActions {
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+    return QueueActions(
+        vm.queue::pause, vm.queue::resume, vm.queue::cancel, vm.queue::retry,
+        vm.queue::pauseAll, vm.queue::resumeAll, vm.queue::clearFailed, onSelect,
+        copyDetails = { job -> scope.launch { clipboard.setText(AnnotatedString(vm.debugReport(job))) } },
+    )
+}
 
 @Composable
 fun QueueRoute(onSelect: (DownloadJob) -> Unit, selectedId: String? = null, vm: QueueViewModel = hiltViewModel()) {
@@ -185,7 +210,10 @@ private fun JobButtons(job: DownloadJob, actions: QueueActions) {
         when (job.phase) {
             JobPhase.PAUSED -> IconAction(Icons.Rounded.PlayArrow, "Resume ${job.title}", { actions.resume(job.id) })
             // Even "permanent" errors can be retried, e.g. after importing cookies.
-            JobPhase.FAILED -> IconAction(Icons.Rounded.Refresh, "Retry ${job.title}", { actions.retry(job.id) })
+            JobPhase.FAILED -> {
+                IconAction(Icons.Rounded.Refresh, "Retry ${job.title}", { actions.retry(job.id) })
+                IconAction(Icons.Rounded.ContentCopy, "Copy details for support", { actions.copyDetails(job) })
+            }
             JobPhase.SAVING -> Unit
             else -> IconAction(Icons.Rounded.Pause, "Pause ${job.title}", { actions.pause(job.id) })
         }

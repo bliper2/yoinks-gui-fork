@@ -8,6 +8,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -20,12 +22,17 @@ import com.yoinks.app.domain.model.JobPhase
 import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.ui.format.Formatters
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /** All notifications: the ongoing progress one and finished/failed results. */
 @Singleton
-class DownloadNotifications @Inject constructor(@ApplicationContext private val context: Context) {
+class DownloadNotifications @Inject constructor(@ApplicationContext private val context: Context, private val http: OkHttpClient) {
     private val manager = NotificationManagerCompat.from(context)
 
     fun createChannels() {
@@ -84,22 +91,47 @@ class DownloadNotifications @Inject constructor(@ApplicationContext private val 
             .build()
     }
 
-    fun completed(job: DownloadJob, saved: List<SavedFile>) {
+    suspend fun completed(job: DownloadJob, saved: List<SavedFile>) {
         if (!allowed()) return
         val first = saved.firstOrNull() ?: return
+        val picture = job.request.thumbnail?.let { loadThumbnail(it) }
         val open = Intent(Intent.ACTION_VIEW).setDataAndType(first.uri, first.mimeType).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         val tap = PendingIntent.getActivity(context, job.id.hashCode(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val text = if (saved.size > 1) context.getString(R.string.notif_saved_many, saved.size, first.location) else first.location
-        notify(
-            job.id.hashCode(),
-            NotificationCompat.Builder(context, CHANNEL_RESULTS)
-                .setSmallIcon(R.drawable.ic_stat_yoinks)
-                .setContentTitle(context.getString(R.string.notif_done, job.title))
-                .setContentText(text)
-                .setAutoCancel(true)
-                .setContentIntent(tap)
-                .build(),
-        )
+        val builder = NotificationCompat.Builder(context, CHANNEL_RESULTS)
+            .setSmallIcon(R.drawable.ic_stat_yoinks)
+            .setContentTitle(context.getString(R.string.notif_done, job.title))
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setContentIntent(tap)
+        if (picture != null) {
+            builder.setLargeIcon(picture)
+            builder.setStyle(NotificationCompat.BigPictureStyle().bigPicture(picture).bigLargeIcon(null as Bitmap?))
+        }
+        if (saved.size == 1) {
+            // "Share" hands the saved file to any app (a chat, a mail, a cloud drive).
+            val send = Intent(Intent.ACTION_SEND).setType(first.mimeType).putExtra(Intent.EXTRA_STREAM, first.uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            val chooser = Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            builder.addAction(0, context.getString(R.string.action_share_file), PendingIntent.getActivity(context, job.id.hashCode() + 1, chooser, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        }
+        notify(job.id.hashCode(), builder.build())
+    }
+
+    /** The video's picture for the notification (small, and given up on after a few seconds). */
+    private suspend fun loadThumbnail(url: String): Bitmap? = withContext(Dispatchers.IO) {
+        runCatching {
+            val client = http.newBuilder().callTimeout(6, TimeUnit.SECONDS).build()
+            client.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                val body = response.body
+                if (!response.isSuccessful || body.contentLength() > MAX_THUMBNAIL_BYTES) return@use null
+                val bytes = body.bytes()
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                var sample = 1
+                while (bounds.outWidth / (sample * 2) >= 512) sample *= 2
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+            }
+        }.getOrNull()
     }
 
     fun failed(job: DownloadJob, error: YoinksError) {
@@ -139,5 +171,6 @@ class DownloadNotifications @Inject constructor(@ApplicationContext private val 
         const val CHANNEL_PROGRESS = "downloads"
         const val CHANNEL_RESULTS = "results"
         const val ONGOING_ID = 1
+        private const val MAX_THUMBNAIL_BYTES = 4L * 1024 * 1024
     }
 }
