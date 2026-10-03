@@ -51,8 +51,10 @@ jobs:
       - run: npm run dist:linux
       - name: Debug asar contents
         run: |
-          DEBUG=electron-builder npx electron-builder --linux dir --publish never --config.directories.output=dbg 2>&1 | grep -iE "extension|firstOrDefault|fileSet|ignore" | cut -c1-400 | head -40 || true
-          ls dbg/linux-unpacked/resources
+          ls extension extension/shared | head -30
+          DEBUG=electron-builder npx electron-builder --linux dir --publish never --config.directories.output=dbg > dbg.log 2>&1 || true
+          grep -nE "asar|filePatterns|\.github|extension" dbg.log | cut -c1-300 | head -60
+          wc -l dbg.log
       - name: The browser helper works from the .deb and the AppImage
         run: bash scripts/ci-linux-smoke.sh
 
