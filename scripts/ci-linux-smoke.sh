@@ -15,7 +15,7 @@ check() {
   local label="$1"; shift
   rm -rf "$home/.config" && mkdir -p "$home/.config/google-chrome"
   echo "== $label: starting the app"
-  HOME="$home" xvfb-run -a "$@" --no-sandbox &
+  HOME="$home" XDG_CONFIG_HOME="$home/.config" xvfb-run -a "$@" --no-sandbox &
   local app=$!
   local manifest="$home/.config/google-chrome/NativeMessagingHosts/com.yoinks.host.json"
   for _ in $(seq 1 60); do [ -f "$manifest" ] && break; sleep 1; done
@@ -24,7 +24,7 @@ check() {
   local launcher
   launcher="$(node -p "require('$manifest').path")"
   cat "$launcher"
-  HOME="$home" node "$root/scripts/smoke-host.js" "$launcher"
+  HOME="$home" XDG_CONFIG_HOME="$home/.config" node "$root/scripts/smoke-host.js" "$launcher"
   kill "$app" 2>/dev/null || true
   wait "$app" 2>/dev/null || true
 }
