@@ -158,6 +158,14 @@ installed app's `resources/` folder or from [ffmpeg.org](https://ffmpeg.org/down
 `npm start` does not need them: it falls back to a system ffmpeg or the
 `ffmpeg-static` package.
 
+### Install with Scoop
+
+```
+scoop install https://raw.githubusercontent.com/bliper2/yoinks-gui-fork/main/packaging/scoop/yoinks.json
+```
+
+Installs the portable app and updates with `scoop update yoinks`. (A winget entry is prepared in `packaging/winget/` but is not published yet.)
+
 ### Linux
 
 `npm install` and `npm start` work the same. yt-dlp is downloaded to `~/.yoinks/bin`,

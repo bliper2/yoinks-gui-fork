@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+PackageIdentifier: mrkraps.Yoinks
+PackageVersion: 2.3.0
+InstallerType: nullsoft
+InstallModes:
+  - interactive
+  - silent
+UpgradeBehavior: install
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/bliper2/yoinks-gui-fork/releases/download/v2.3.0/Yoinks-2.3.0-x64-setup.exe
+    InstallerSha256: 4887B36615D3E8F316994EC3161508826B2C95E60DE73DB5C77E3BC444D9B1EE
+ManifestType: installer
+ManifestVersion: 1.6.0
