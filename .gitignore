@@ -15,3 +15,12 @@ ffplay
 host/com.yoinks.host.json
 host/com.yoinks.host.firefox.json
 host/host.sh
+
+# Secrets never go in the repo: the Discord webhook is an environment variable / GitHub secret
+.env
+.env.*
+*webhook*.txt
+*webhook*.json
+keystore.properties
+*.jks
+*.pfx
