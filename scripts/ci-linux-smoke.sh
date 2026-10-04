@@ -2,7 +2,7 @@
 # CI only: installs the built Linux packages and proves the browser helper
 # works from each one. Run from the project root after "npm run dist:linux".
 #   .deb      installed under /opt/Yoinks
-#   AppImage  run in place (APPIMAGE_EXTRACT_AND_RUN because CI has no FUSE)
+#   AppImage  run in place, mounted through FUSE like on a real desktop
 set -euo pipefail
 
 root="$PWD"
@@ -32,7 +32,7 @@ check() {
 sudo apt-get install -y ./release/Yoinks-*-linux-amd64.deb
 check "deb" /opt/Yoinks/yoinks
 
+sudo apt-get install -y libfuse2t64
 appimage="$(ls "$root"/release/Yoinks-*-linux-x86_64.AppImage)"
 chmod +x "$appimage"
-export APPIMAGE_EXTRACT_AND_RUN=1
 check "AppImage" "$appimage"
