@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: mrkraps.Yoinks
+PackageVersion: 2.3.0
+PackageLocale: en-US
+Publisher: mrkraps
+PublisherUrl: https://github.com/bliper2
+PublisherSupportUrl: https://github.com/bliper2/yoinks-gui-fork/issues
+PackageName: Yoinks
+PackageUrl: https://bliper2.github.io/yoinks-gui-fork/
+License: MIT
+LicenseUrl: https://github.com/bliper2/yoinks-gui-fork/blob/main/LICENSE
+ShortDescription: Save videos and music from YouTube and 1,800+ other sites.
+Description: Yoinks is a free downloader built on yt-dlp and ffmpeg. Paste a link or search by name, pick a quality or audio only, and it downloads. It also works with a browser extension, and has Android and Linux versions. No ads, no tracking, no accounts.
+Moniker: yoinks
+Tags:
+  - downloader
+  - video
+  - music
+  - youtube
+  - yt-dlp
+ReleaseNotesUrl: https://github.com/bliper2/yoinks-gui-fork/releases/tag/v2.3.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

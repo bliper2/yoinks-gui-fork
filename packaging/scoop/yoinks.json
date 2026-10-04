@@ -1,0 +1,21 @@
+{
+    "version": "2.3.0",
+    "description": "Save videos and music from YouTube and 1,800+ sites. Built on yt-dlp and ffmpeg. No ads, no tracking.",
+    "homepage": "https://bliper2.github.io/yoinks-gui-fork/",
+    "license": "MIT",
+    "url": "https://github.com/bliper2/yoinks-gui-fork/releases/download/v2.3.0/Yoinks-2.3.0-x64-portable.exe#/yoinks.exe",
+    "hash": "506b2238ccb94139d478e98d0a50a212688b27a80c72b808f9526465cb10c9dd",
+    "bin": "yoinks.exe",
+    "shortcuts": [
+        [
+            "yoinks.exe",
+            "Yoinks"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/bliper2/yoinks-gui-fork"
+    },
+    "autoupdate": {
+        "url": "https://github.com/bliper2/yoinks-gui-fork/releases/download/v$version/Yoinks-$version-x64-portable.exe#/yoinks.exe"
+    }
+}
