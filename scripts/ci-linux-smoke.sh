@@ -19,7 +19,7 @@ check() {
   local app=$!
   local manifest="$home/.config/google-chrome/NativeMessagingHosts/com.yoinks.host.json"
   for _ in $(seq 1 60); do [ -f "$manifest" ] && break; sleep 1; done
-  if [ ! -f "$manifest" ]; then echo "$label: the app never registered the helper"; kill "$app" 2>/dev/null || true; exit 1; fi
+  if [ ! -f "$manifest" ]; then echo "$label: the app never registered the helper"; find "$home" -maxdepth 4 | head -60; ps aux | grep -i yoinks | head -5; kill "$app" 2>/dev/null || true; exit 1; fi
   cat "$manifest"
   local launcher
   launcher="$(node -p "require('$manifest').path")"
@@ -30,7 +30,6 @@ check() {
 }
 
 sudo apt-get install -y ./release/Yoinks-*-linux-amd64.deb
-ELECTRON_RUN_AS_NODE=1 /opt/Yoinks/yoinks -e "const fs=require('fs');const a='/opt/Yoinks/resources/app.asar';console.log(fs.readdirSync(a));console.log(fs.readdirSync(a+'/extension'));console.log(fs.readdirSync(a+'/extension/shared'))" || true
 check "deb" /opt/Yoinks/yoinks
 
 appimage="$(ls "$root"/release/Yoinks-*-linux-x86_64.AppImage)"
