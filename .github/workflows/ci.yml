@@ -49,12 +49,6 @@ jobs:
       - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y rpm xvfb
       - run: npm run dist:linux
-      - name: Debug asar contents
-        run: |
-          npx asar list release/linux-unpacked/resources/app.asar > asar.txt
-          wc -l asar.txt
-          grep -cE "^/extension" asar.txt || true
-          grep -E "^/[a-z.]+$" asar.txt
       - name: The browser helper works from the .deb and the AppImage
         run: bash scripts/ci-linux-smoke.sh
 
