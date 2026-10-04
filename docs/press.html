@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yoinks press kit</title>
+<meta name="description" content="Facts, descriptions, logos and screenshots of Yoinks, a free open source video and music downloader for Windows, Linux, Android and browsers.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+  :root { --bg: #f6f7fb; --card: #ffffff; --text: #141925; --muted: #525c70; --border: rgba(15, 23, 42, .12); --accent: #8b6bff; --accent2: #22d3ee; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1015; --card: #161920; --text: #e8edf4; --muted: #9aa3b5; --border: rgba(255, 255, 255, .1); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
+  header { padding: 18px 0; display: flex; align-items: center; gap: 12px; }
+  header img { width: 36px; height: 36px; }
+  header strong { font-size: 20px; }
+  header nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  header nav a { text-decoration: none; }
+  header nav a:hover { color: var(--text); }
+  h1 { font-size: clamp(28px, 5vw, 40px); margin: 24px 0 6px; letter-spacing: -.02em; }
+  h2 { font-size: 22px; margin: 34px 0 10px; }
+  .lead { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+  .card p { margin: 0 0 10px; }
+  .card p:last-child { margin-bottom: 0; }
+  .label { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  dl { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 8px 16px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin: 5px 0; }
+  .files { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .files a { display: block; text-decoration: none; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; text-align: center; font-size: 14px; }
+  .files img { max-width: 100%; max-height: 120px; border-radius: 8px; margin-bottom: 6px; }
+  .shots { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+  .shots img { height: 360px; border-radius: 12px; border: 1px solid var(--border); flex: none; }
+  footer { color: var(--muted); font-size: 14px; text-align: center; padding-top: 20px; }
+  @media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px; } dt { margin-top: 8px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="logo.svg" alt="">
+    <strong>Yoinks</strong>
+    <nav>
+      <a href="./">Home</a>
+      <a href="changelog.html">Changelog</a>
+      <a href="https://github.com/bliper2/yoinks-gui-fork">GitHub</a>
+      <a href="https://discord.gg/knRghkqzct">Discord</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Press kit</h1>
+    <p class="lead">Everything you need to write about Yoinks: what it is, the facts, descriptions you can copy, logos and screenshots. Use any of it freely.</p>
+
+    <h2>About</h2>
+    <div class="card">
+      <div class="label">One line</div>
+      <p>Yoinks is a free, open source app that saves videos and music from YouTube, TikTok, Instagram, SoundCloud and over 1,800 other sites.</p>
+      <div class="label">Short description</div>
+      <p>Yoinks is a downloader for people who want to keep media they have the right to keep. Paste a link or type words to search, choose a quality or audio only, and the file is saved. It comes as a Windows and Linux app, a browser extension and an Android app, all built on the open source tools yt-dlp and ffmpeg. It is free, has no ads, no tracking and no accounts.</p>
+      <div class="label">What it does not do</div>
+      <p>Yoinks does not host, index or provide any media. It runs on the user's own device and downloads straight from the site the user chooses. Spotify links are matched to the same song on YouTube Music and nothing is taken from Spotify.</p>
+    </div>
+
+    <h2>Fact sheet</h2>
+    <div class="card">
+      <dl>
+        <dt>Name</dt><dd>Yoinks</dd>
+        <dt>Category</dt><dd>Video and music downloader</dd>
+        <dt>Platforms</dt><dd>Windows, Linux (AppImage, .deb, .rpm), Android, and a browser extension for Chrome, Brave, Edge and Firefox-based browsers</dd>
+        <dt>Price</dt><dd>Free</dd>
+        <dt>Latest version</dt><dd><a href="https://github.com/bliper2/yoinks-gui-fork/releases/latest">See the latest release</a> (changes are on the <a href="changelog.html">changelog page</a>)</dd>
+        <dt>License</dt><dd>MIT (Windows and Linux app, extension). GPL-3.0 (Android app).</dd>
+        <dt>Built on</dt><dd><a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a>, <a href="https://ffmpeg.org">ffmpeg</a>, and the open source <a href="https://github.com/pablostanley/yoinks">yoinks</a> project</dd>
+        <dt>Developer</dt><dd>mrkraps</dd>
+        <dt>Source code</dt><dd><a href="https://github.com/bliper2/yoinks-gui-fork">github.com/bliper2/yoinks-gui-fork</a></dd>
+        <dt>Privacy</dt><dd>No servers, no accounts, no tracking. It only talks to the sites you download from and to GitHub for updates. See <a href="https://github.com/bliper2/yoinks-gui-fork/blob/main/SECURITY.md">SECURITY.md</a>.</dd>
+        <dt>Community</dt><dd><a href="https://discord.gg/knRghkqzct">Discord</a></dd>
+      </dl>
+    </div>
+
+    <h2>Highlights</h2>
+    <div class="card">
+      <ul>
+        <li>Paste a link or search by name, then pick a quality or audio only. Presets like "Music FLAC" make it one click.</li>
+        <li>A button on the page next to Like and Share on YouTube, YouTube Music, SoundCloud, TikTok and more, and a right-click option to save every video on a page.</li>
+        <li>Playlists: tick the videos you want, keep them in their own folder, or split a long video by its chapters.</li>
+        <li>Spotify links are found on YouTube Music and saved with Spotify's title, artist, album and cover.</li>
+        <li>On Windows and Linux, convert your own files to MP3, M4A, FLAC, Opus or MP4.</li>
+        <li>yt-dlp updates itself, and a health check explains what is wrong when a site changes.</li>
+      </ul>
+    </div>
+
+    <h2>Logos</h2>
+    <div class="files">
+      <a href="brand/yoinks-icon-512.png" download><img src="brand/yoinks-icon-512.png" alt="Yoinks icon">Icon, PNG 512 px</a>
+      <a href="brand/yoinks-logo.svg" download><img src="brand/yoinks-logo.svg" alt="Yoinks logo">Logo, SVG</a>
+      <a href="brand/yoinks-discord-1024.png" download><img src="brand/yoinks-discord-1024.png" alt="Yoinks on a dark square">Square, PNG 1024 px</a>
+    </div>
+
+    <h2>Screenshots</h2>
+    <div class="shots">
+      <img src="screenshots/desktop-formats.png" alt="Choosing a quality in the Windows app">
+      <img src="screenshots/desktop-queue.png" alt="The download queue in the Windows app">
+      <img src="screenshots/android-share-sheet.png" alt="The Android share sheet">
+      <img src="screenshots/android-spotify.png" alt="A Spotify album matched on YouTube Music">
+      <img src="screenshots/extension-youtube.png" alt="The Yoink button on YouTube">
+    </div>
+
+    <h2>Contact</h2>
+    <div class="card">
+      <p>For questions, interviews or review copies, write on the <a href="https://discord.gg/knRghkqzct">Discord</a> or open an <a href="https://github.com/bliper2/yoinks-gui-fork/issues/new/choose">issue on GitHub</a>. Everything is free, so there is nothing to buy to review it.</p>
+    </div>
+  </main>
+
+  <footer>Only download what you have the right to keep. Built on yt-dlp and ffmpeg.</footer>
+</div>
+</body>
+</html>
