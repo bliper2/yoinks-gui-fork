@@ -51,11 +51,10 @@ jobs:
       - run: npm run dist:linux
       - name: Debug asar contents
         run: |
-          ls extension extension/shared | head -30
-          DEBUG=electron-builder npx electron-builder --linux dir --publish never --config.directories.output=dbg > dbg.log 2>&1 || true
-          sed -n 20,116p dbg.log | cut -c1-260
-          npx asar list dbg/linux-unpacked/resources/app.asar | head -30
-          wc -l dbg.log
+          npx asar list release/linux-unpacked/resources/app.asar > asar.txt
+          wc -l asar.txt
+          grep -cE "^/extension" asar.txt || true
+          grep -E "^/[a-z.]+$" asar.txt
       - name: The browser helper works from the .deb and the AppImage
         run: bash scripts/ci-linux-smoke.sh
 
