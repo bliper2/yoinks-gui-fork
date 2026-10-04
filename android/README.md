@@ -165,7 +165,7 @@ main screens from their preview data (Robolectric + Roborazzi, no phone) to
 
 ## Support
 
-Help, bugs and ideas: [Yoink Community on Discord](https://discord.gg/yEF99JeG9b) or [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues).
+Help, bugs and ideas: [Yoink Community on Discord](https://discord.gg/knRghkqzct) or [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues).
 
 ## License
 

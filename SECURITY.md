@@ -5,7 +5,7 @@
 If you find a security problem in Yoinks (for example a way for a web page to make the extension download or open something it should not, or a way to make the helper run a command), please do not post it in public.
 
 - Use **GitHub's private report**: on the repository, open the **Security** tab and choose **Report a vulnerability**.
-- Or message the maintainer privately on the [Yoink Community Discord](https://discord.gg/yEF99JeG9b).
+- Or message the maintainer privately on the [Yoink Community Discord](https://discord.gg/knRghkqzct).
 
 Please include the app (Windows, extension or Android), its version, and the steps to repeat it. You will get an answer as soon as possible, and a fix is released as a new version with a note in the [changelog](CHANGELOG.md).
 
