@@ -10,10 +10,10 @@ Built on [yoinks](https://github.com/pablostanley/yoinks), with
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) doing the downloading and
 [ffmpeg](https://ffmpeg.org) the converting. No ads, no tracking, no accounts.
 
-[![Discord](https://img.shields.io/badge/Discord-Yoink%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/yEF99JeG9b)
+[![Discord](https://img.shields.io/badge/Discord-Yoink%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/knRghkqzct)
 [![Latest release](https://img.shields.io/github/v/release/bliper2/yoinks-gui-fork?label=release)](https://github.com/bliper2/yoinks-gui-fork/releases/latest)
 
-**Need help, found a bug or have an idea?** Join the [Yoink Community on Discord](https://discord.gg/yEF99JeG9b), or open an [issue](https://github.com/bliper2/yoinks-gui-fork/issues). Common problems and their fixes are in [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
+**Need help, found a bug or have an idea?** Join the [Yoink Community on Discord](https://discord.gg/knRghkqzct), or open an [issue](https://github.com/bliper2/yoinks-gui-fork/issues). Common problems and their fixes are in [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
 
 <p align="center"><img src="docs/demo.gif" width="360" alt="Pasting a link, picking a quality, downloading, done"></p>
 
@@ -364,7 +364,7 @@ changelog copies and the extension's script list agree everywhere.
 
 ## Support
 
-- **Discord:** [Yoink Community](https://discord.gg/yEF99JeG9b) for help, update announcements and ideas.
+- **Discord:** [Yoink Community](https://discord.gg/knRghkqzct) for help, update announcements and ideas.
 - **Bugs and feature requests:** [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues/new/choose). Tell us the app (Windows, extension or Android), its version and the link that failed; **Copy details** on the error does that for you.
 - **Common problems:** [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
 - **Security problems:** see [SECURITY.md](SECURITY.md); please report them privately.

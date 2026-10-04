@@ -68,7 +68,7 @@ ${items.map(item => `        <li>${inline(item)}</li>`).join('\n')}
       <a href="./">Home</a>
       <a href="https://github.com/bliper2/yoinks-gui-fork/releases/latest">Download</a>
       <a href="https://github.com/bliper2/yoinks-gui-fork">GitHub</a>
-      <a href="https://discord.gg/yEF99JeG9b">Discord</a>
+      <a href="https://discord.gg/knRghkqzct">Discord</a>
     </nav>
   </header>
   <main>
@@ -76,7 +76,7 @@ ${items.map(item => `        <li>${inline(item)}</li>`).join('\n')}
     <p class="lead">What changed in each version of Yoinks.</p>
 ${sections}
   </main>
-  <footer>Also posted in the <a href="https://discord.gg/yEF99JeG9b">Discord</a> and on each <a href="https://github.com/bliper2/yoinks-gui-fork/releases">GitHub release</a>.</footer>
+  <footer>Also posted in the <a href="https://discord.gg/knRghkqzct">Discord</a> and on each <a href="https://github.com/bliper2/yoinks-gui-fork/releases">GitHub release</a>.</footer>
 </div>
 </body>
 </html>

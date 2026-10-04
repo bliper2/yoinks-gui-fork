@@ -72,4 +72,4 @@ Android installs an update only over an app signed with the same key. If you ins
 
 ---
 
-Not listed? Run **Health check**, tap **Copy results** (or **Copy details** on the error) and ask on the [Discord](https://discord.gg/yEF99JeG9b) or open a [GitHub issue](https://github.com/bliper2/yoinks-gui-fork/issues/new/choose).
+Not listed? Run **Health check**, tap **Copy results** (or **Copy details** on the error) and ask on the [Discord](https://discord.gg/knRghkqzct) or open a [GitHub issue](https://github.com/bliper2/yoinks-gui-fork/issues/new/choose).

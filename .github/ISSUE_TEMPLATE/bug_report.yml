@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for helping. The fastest way to a fix: use **Copy details** on the error (or **Settings, Health check, Copy results**) and paste it below.
-        Questions or "how do I"? The [Discord](https://discord.gg/yEF99JeG9b) is quicker.
+        Questions or "how do I"? The [Discord](https://discord.gg/knRghkqzct) is quicker.
   - type: dropdown
     id: app
     attributes:
