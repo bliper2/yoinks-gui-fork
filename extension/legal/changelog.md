@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.0
+
+- Linux: Yoinks now runs on Linux as an AppImage, a .deb and an .rpm. The AppImage updates itself, and the browser extension works with Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Waterfox and LibreWolf (not Snap or Flatpak browsers).
+- New changelog page on the Yoinks website, always matching the latest release.
+- Android: when yt-dlp still says it cannot read a page after a normal update, Yoinks now tries the nightly build once and retries.
+
 ## 2.2.0
 
 - Type words instead of a link to search YouTube (Windows, extension, Android).
