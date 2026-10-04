@@ -40,7 +40,14 @@
       "main/**/*",
       "core/**/*",
       "host/**/*",
-      "extension/**/*",
+      {
+        "from": "extension",
+        "to": "extension",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      },
       "preload.js",
       "package.json",
       "!**/*.map",
