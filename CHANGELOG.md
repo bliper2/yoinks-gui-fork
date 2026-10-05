@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.1
+
+- Fixed: the arrow next to the Yoink button on a page did not open its menu on some sites, such as YouTube Music.
+- Browser extension: the helper now finds Node.js even when the browser does not pass it on, and starts again by itself if it fails to start the first time.
+- The helper keeps a small log at `.yoinks/helper.log` in your user folder, to help find out why it stopped.
+
 ## 2.3.0
 
 - Linux: Yoinks now runs on Linux as an AppImage, a .deb and an .rpm. The AppImage updates itself, and the browser extension works with Chrome, Chromium, Brave, Edge, Vivaldi, Firefox, Waterfox and LibreWolf (not Snap or Flatpak browsers).

@@ -214,9 +214,18 @@
     const caret = el('button', { class: 'caret', type: 'button', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'aria-label': 'More download options', title: 'More options' }, [
       svg('svg', { viewBox: '0 0 10 10', 'aria-hidden': 'true' }, [svg('path', { d: 'M1 3l4 4 4-4z' })]),
     ])
-    const menu = el('div', { class: 'menu', role: 'menu', hidden: true })
-    const wrap = el('div', { class: 'wrap', 'data-state': 'idle' }, [main, caret, menu])
+    const wrap = el('div', { class: 'wrap', 'data-state': 'idle' }, [main, caret])
     shadow.append(wrap)
+
+    // The menu lives in its own overlay on <html>, not inside the button: sites
+    // such as YouTube Music put the button in a bar with transforms or clipping,
+    // which would hide or misplace a menu that is a child of it.
+    const menu = el('div', { class: 'menu', role: 'menu', hidden: true })
+    const overlay = el('yoinks-menu')
+    overlay.style.cssText = 'all: initial; position: fixed; top: 0; left: 0; z-index: 2147483001;'
+    const overlayShadow = overlay.attachShadow({ mode: 'closed' })
+    overlayShadow.adoptedStyleSheets = [sheet]
+    overlayShadow.append(menu)
 
     let state = { phase: 'idle' }
     let resetTimer = null
@@ -315,6 +324,7 @@
 
     function openMenu() {
       menu.replaceChildren(...menuItems())
+      document.documentElement.append(overlay)
       menu.hidden = false
       placeMenu()
       caret.setAttribute('aria-expanded', 'true')
@@ -326,6 +336,7 @@
 
     function closeMenu() {
       menu.hidden = true
+      overlay.remove()
       caret.setAttribute('aria-expanded', 'false')
       document.removeEventListener('pointerdown', outside, true)
       removeEventListener('scroll', placeMenu, true)
@@ -333,22 +344,25 @@
     }
 
     function outside(event) {
-      if (!event.composedPath().includes(host)) closeMenu()
+      const path = event.composedPath()
+      if (!path.includes(host) && !path.includes(overlay)) closeMenu()
     }
 
     caret.addEventListener('click', () => (menu.hidden ? openMenu() : closeMenu()))
-    wrap.addEventListener('keydown', event => {
+    function menuKeys(event) {
       if (event.key === 'Escape' && !menu.hidden) {
         closeMenu()
         caret.focus()
       }
       if ((event.key === 'ArrowDown' || event.key === 'ArrowUp') && !menu.hidden) {
         const items = [...menu.querySelectorAll('.item')]
-        const i = items.indexOf(shadow.activeElement)
+        const i = items.indexOf(overlayShadow.activeElement)
         items[(i + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length]?.focus({ preventScroll: true })
         event.preventDefault()
       }
-    })
+    }
+    wrap.addEventListener('keydown', menuKeys)
+    menu.addEventListener('keydown', menuKeys)
 
     // ---------- state ----------
 
