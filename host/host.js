@@ -10,7 +10,32 @@
 //
 // stdout is the protocol channel: never console.log here.
 
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
+
 const { Session } = require('../core/session')
+
+// A browser hides why a helper died, so keep a small local log of what it did
+// and why it stopped: ~/.yoinks/helper.log (kept under 200 KB, local only).
+const LOG = path.join(os.homedir(), '.yoinks', 'helper.log')
+function log(line) {
+  try {
+    fs.mkdirSync(path.dirname(LOG), { recursive: true })
+    if (fs.existsSync(LOG) && fs.statSync(LOG).size > 200_000) fs.rmSync(LOG)
+    fs.appendFileSync(LOG, `${new Date().toISOString()} [${process.pid}] ${line}
+`)
+  } catch {
+    // logging must never break the helper
+  }
+}
+log(`start node ${process.version} ${process.platform}`)
+process.on('uncaughtException', error => {
+  log(`uncaught ${error?.stack ?? error}`)
+  process.exit(1)
+})
+process.on('unhandledRejection', error => log(`unhandled rejection ${error?.stack ?? error}`))
+process.on('exit', code => log(`exit ${code}`))
 
 const MAX_MESSAGE = 1024 * 1024 // Chrome's limit for host -> browser
 
@@ -28,7 +53,8 @@ function send(message) {
 const session = new Session(send)
 
 // The browser went away while we were writing: nothing left to do.
-process.stdout.on('error', () => {
+process.stdout.on('error', error => {
+  log(`stdout error ${error.code}`)
   session.close()
   process.exit(0)
 })
@@ -48,12 +74,14 @@ process.stdin.on('data', chunk => {
       send({ type: 'error', code: 'bad-request', message: 'Bad message from the extension.', retryable: false })
       continue
     }
+    log(`message ${message?.type}`)
     session.handle(message)
   }
 })
 
 // Browser closed the port: stop whatever is running, clean up, exit.
 process.stdin.on('end', () => {
+  log('browser closed the port')
   session.close()
   process.exit(0)
 })
