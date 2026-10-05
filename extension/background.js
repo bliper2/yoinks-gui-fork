@@ -39,16 +39,25 @@ const backend = {
 
   // A port rather than sendNativeMessage: an open port keeps this worker
   // alive while, e.g., the folder dialog waits on the user.
-  request(message) {
+  // Starting the helper (a batch file, then Node) can fail once in a while
+  // on a busy PC, so a helper that dies before answering is started once more.
+  request(message, retried = false) {
     return new Promise((resolve, reject) => {
       const port = chrome.runtime.connectNative(HOST_NAME)
+      let answered = false
       port.onMessage.addListener(reply => {
+        answered = true
         if (reply?.type === 'status') return
         port.disconnect()
         if (reply?.type === 'error') reject(new Error(reply.message))
         else resolve(reply)
       })
-      port.onDisconnect.addListener(() => reject(new Error(hostError(chrome.runtime.lastError?.message))))
+      port.onDisconnect.addListener(() => {
+        const reason = chrome.runtime.lastError?.message
+        if (!answered && !retried && !/not found|forbidden|not allowed/i.test(reason ?? '')) {
+          setTimeout(() => backend.request(message, true).then(resolve, reject), 400)
+        } else reject(new Error(hostError(reason)))
+      })
       port.postMessage(message)
     })
   },
