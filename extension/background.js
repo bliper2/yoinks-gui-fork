@@ -134,6 +134,12 @@ function onJobUpdate(job) {
     .catch(() => {}) // tab closed or navigated away
 }
 
+// Watched channels: a browser alarm wakes the worker every 30 minutes.
+chrome.alarms?.create('yoinks-watch', { periodInMinutes: 30, delayInMinutes: 2 })
+chrome.alarms?.onAlarm.addListener(alarm => {
+  if (alarm.name === 'yoinks-watch') controller.command({ type: 'watch:run' })
+})
+
 const controller = YoinksController.create({ backend, storage, notify, onState, onJobUpdate, platform: 'extension' })
 
 chrome.runtime.onConnect.addListener(port => {

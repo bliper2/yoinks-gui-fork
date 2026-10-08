@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.0
+
+- Watched channels (Windows, Linux, extension): add a channel or playlist link in Settings, Queue. Yoinks checks it every 30 minutes while it is open and downloads new uploads by itself, in your default quality. Only uploads from after you add it are downloaded.
+- Trim handles: when you choose "Only a clip", drag two sliders over the video's length instead of typing times. The time boxes still work and stay in step.
+- Settings has a search box that finds a setting by name or description.
+- The extension needs one new permission, "alarms", so the browser can wake it for the 30 minute channel check.
+
 ## 2.3.1
 
 - Fixed: the arrow next to the Yoink button on a page did not open its menu on some sites, such as YouTube Music.

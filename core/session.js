@@ -67,6 +67,8 @@ class Session {
         return this.probe(message.url, message.playlist === true)
       case 'search':
         return this.search(message.query)
+      case 'watch:check':
+        return this.watchCheck(message.url)
       case 'convert':
         return this.convert(message.filepath, message.target)
       case 'download':
@@ -336,6 +338,17 @@ class Session {
       this.send({ type: 'status', message: 'Searching…' })
       const results = await this.retryWithUpdate(settings, () => ytdlp.searchVideos(bin, query, { signal, settings }))
       this.send({ type: 'results', query, results })
+    })
+  }
+
+  // ---------- watched channels ----------
+
+  async watchCheck(url) {
+    const settings = this.settings()
+    await this.withAbort(async signal => {
+      const { ytdlp: bin } = await this.binaries(signal, settings)
+      const found = await this.retryWithUpdate(settings, () => ytdlp.listUploads(bin, url, { signal, settings }))
+      this.send({ type: 'watch', ...found })
     })
   }
 

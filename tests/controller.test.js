@@ -206,3 +206,29 @@ test('picking from the lookup card can apply a preset', async () => {
   await t.controller.command({ type: 'choose', index: 1, overrides: { audioFormat: 'opus', embedSubs: true, embedThumbnail: false, evil: 'x' } })
   assert.deepEqual(t.lastChannel().posts.at(-1).overrides, { audioFormat: 'opus', embedSubs: true, embedThumbnail: false })
 })
+
+test('a watched channel adds only new uploads to the queue', async () => {
+  let entries = [{ id: 'a', title: 'Old', url: 'https://www.youtube.com/watch?v=a' }]
+  const { controller, requests, tick, settings } = makeController({
+    platform: 'desktop',
+    reply: { 'watch:check': async () => ({ type: 'watch', title: 'Some channel', entries }) },
+  })
+  await controller.command({ type: 'watch:add', url: 'https://www.youtube.com/@some/videos' })
+  assert.equal(settings().watches.length, 1)
+  assert.deepEqual(settings().watches[0].seen, ['a'])
+  assert.equal(controller.view().queue.length, 0, 'what is already there is not downloaded')
+
+  entries = [{ id: 'b', title: 'New', url: 'https://www.youtube.com/watch?v=b' }, ...entries]
+  await controller.command({ type: 'watch:run' })
+  await tick()
+  const queue = controller.view().queue
+  assert.equal(queue.length, 1)
+  assert.match(queue[0].url, /v=b$/)
+  assert.deepEqual(settings().watches[0].seen, ['a', 'b'])
+
+  await controller.command({ type: 'watch:run' })
+  assert.equal(controller.view().queue.length, 1, 'the same upload is not added twice')
+  await controller.command({ type: 'watch:remove', url: 'https://www.youtube.com/@some/videos' })
+  assert.equal(settings().watches.length, 0)
+  assert.ok(requests.some(r => r.type === 'watch:check'))
+})

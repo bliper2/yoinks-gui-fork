@@ -322,6 +322,33 @@ async function searchVideos(ytdlp, query, { limit = 8, signal, settings } = {}) 
     }))
 }
 
+// ---------- watched channels ----------
+
+/** The newest uploads of a channel or playlist link: { title, entries: [{ id, title, url }] }. */
+async function listUploads(ytdlp, rawUrl, { limit = 15, signal, settings } = {}) {
+  let url = String(rawUrl ?? '')
+  if (!/^https?:\/\//.test(url)) throw new YoinksError({ code: 'bad-request', message: 'That is not a link.' })
+  // A bare YouTube channel link lists its tabs, not its videos.
+  url = url.replace(/^(https?:\/\/(?:www\.|m\.)?youtube\.com\/(?:@[^/?#]+|channel\/[^/?#]+|c\/[^/?#]+|user\/[^/?#]+))\/?(?:[?#].*)?$/, '$1/videos')
+  const result = await run(ytdlp, [...UTF8, '-J', '--flat-playlist', '--no-warnings', '--playlist-end', String(limit), ...cookieArgs(settings), '--', url], { signal })
+  if (result.code !== 0) throw fromYtdlp(result.stderr, 'Could not read that channel.')
+  let info
+  try {
+    info = JSON.parse(result.stdout)
+  } catch {
+    throw new YoinksError({ code: 'unknown', message: 'Could not read that channel.', retryable: true })
+  }
+  if (!Array.isArray(info.entries)) throw new YoinksError({ code: 'not-a-list', message: 'That link is a single video. Watch a channel or playlist link instead.' })
+  const entries = info.entries
+    .filter(entry => entry?.id)
+    .map(entry => ({
+      id: String(entry.id).slice(0, 80),
+      title: String(entry.title ?? 'Untitled').slice(0, 200),
+      url: /^https:\/\//.test(entry.url ?? '') ? entry.url : `https://www.youtube.com/watch?v=${entry.id}`,
+    }))
+  return { title: String(info.title ?? info.uploader ?? url).slice(0, 80), entries }
+}
+
 // ---------- convert a local file ----------
 
 const CONVERT_TARGETS = {
@@ -649,6 +676,7 @@ function toNumber(value) {
 }
 
 module.exports = {
+  listUploads,
   YoinksError,
   ensureYtDlp,
   versionInfo,

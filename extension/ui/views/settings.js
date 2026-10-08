@@ -261,6 +261,38 @@
       )
     }
 
+    // Watched channels: new uploads are added to the queue by themselves.
+    extras.watches = h('div', { class: 'setting setting-wide watch-editor' })
+    sections.get('Queue').push(extras.watches)
+    const watchUrl = h('input', { class: 'field', type: 'url', placeholder: 'Channel or playlist link', 'aria-label': 'Channel or playlist link to watch' })
+    const addWatch = () => {
+      if (!watchUrl.value.trim()) return
+      send({ type: 'watch:add', url: watchUrl.value })
+      watchUrl.value = ''
+    }
+    watchUrl.addEventListener('keydown', event => event.key === 'Enter' && addWatch())
+    function renderWatches(list) {
+      const key = JSON.stringify(list.map(w => [w.url, w.title]))
+      if (extras.watches.dataset.key === key) return
+      extras.watches.dataset.key = key
+      extras.watches.replaceChildren(
+        h('div', { class: 'setting-text' }, h('span', { class: 'label', text: 'Watched channels' }), h('p', { class: 'help', text: 'Yoinks checks these every 30 minutes while it is open and downloads new uploads in your default quality.' })),
+        h(
+          'div',
+          { class: 'setting-control preset-list' },
+          list.map(watch =>
+            h(
+              'span',
+              { class: 'chip remembered-chip', title: watch.url },
+              watch.title,
+              h('button', { type: 'button', class: 'chip-x', 'aria-label': `Stop watching ${watch.title}`, title: 'Stop watching', onclick: () => send({ type: 'watch:remove', url: watch.url }) }, icon('close', { size: 12 })),
+            ),
+          ),
+          h('div', { class: 'preset-form' }, watchUrl, button({ icon: 'check', text: 'Watch', variant: 'secondary', size: 'sm', onClick: addWatch, disabled: list.length >= Schema.MAX_WATCHES })),
+        ),
+      )
+    }
+
     // Quality remembered per website (set from the format list).
     extras.sites = h('div', { class: 'setting setting-wide', hidden: true })
     sections.get('Downloads').push(extras.sites)
@@ -445,12 +477,31 @@
       })
     }
 
+    // Search: hides every setting whose name or help does not match, and empty sections.
+    const searchBox = h('input', { class: 'field settings-search', type: 'search', placeholder: 'Search settings', 'aria-label': 'Search settings' })
+    searchBox.addEventListener('input', () => {
+      const words = searchBox.value.toLowerCase().split(/\s+/).filter(Boolean)
+      for (const section of el.querySelectorAll('.settings-section')) {
+        const rows = [...section.querySelectorAll('.setting')]
+        let shown = 0
+        for (const row of rows) {
+          const match = words.every(word => (row.textContent ?? '').toLowerCase().includes(word))
+          row.classList.toggle('search-hidden', !match)
+          if (match && !row.hidden) shown++
+        }
+        const titleMatch = words.length && words.every(word => (section.querySelector('h2')?.textContent ?? '').toLowerCase().includes(word))
+        if (titleMatch) rows.forEach(row => row.classList.remove('search-hidden'))
+        section.classList.toggle('search-hidden', words.length > 0 && !titleMatch && (rows.length ? shown === 0 : true))
+      }
+    })
+
     const order = ['Look', 'Downloads', 'Audio', 'Tags', 'Playlists', 'Queue', 'yt-dlp']
     const el = h(
       'div',
       { class: 'settings' },
       h('h1', { class: 'headline' }, icon('settings', { size: 22 }), 'Settings'),
       h('p', { class: 'sub', text: 'Saved on this PC and shared by the Yoinks browser extension and desktop app.' }),
+      searchBox,
       order.map(name =>
         h('section', { class: 'card settings-section', 'aria-labelledby': `sec-${name}` }, h('h2', { id: `sec-${name}` }, icon(SECTION_ICONS[name], { size: 16 }), name), sections.get(name)),
       ),
@@ -473,6 +524,7 @@
         renderHealth(view.health)
         renderSites(settings.siteFormats)
         renderPresets(settings.presets ?? [])
+        renderWatches(settings.watches ?? [])
         extras.version.textContent = view.ytdlp.version ?? (view.hostProblem ? 'unavailable' : '…')
         extras.versionNote.textContent = view.ytdlp.message || (view.ytdlp.version && !view.ytdlp.managed ? 'Installed on your system, not by Yoinks.' : view.hostProblem ?? '')
         extras.update.disabled = Boolean(view.ytdlp.busy)

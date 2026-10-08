@@ -192,3 +192,12 @@ test('the download window, including one that crosses midnight', () => {
   assert.equal(Schedule.isOpen(night, at(12)), false)
   assert.equal(Schedule.isOpen({ scheduleOn: true, scheduleFrom: '08:00', scheduleTo: '08:00' }, at(3)), true, 'same time means always')
 })
+
+test('watched channels are validated', () => {
+  const Schema = require('../extension/shared/settings-schema.js')
+  const good = [{ url: 'https://www.youtube.com/@a', title: 'A', seen: ['x'] }]
+  assert.deepEqual(Schema.validate({ watches: good }, Schema.defaults()).settings.watches, good)
+  const bad = Schema.validate({ watches: [{ url: 'javascript:alert(1)', title: 'A', seen: [] }] }, Schema.defaults())
+  assert.deepEqual(bad.settings.watches, [])
+  assert.ok(bad.errors.watches)
+})
