@@ -63,6 +63,8 @@
     ['bottom', 'Floating bottom'],
   ]
   const MAX_PRESETS = 12
+  const MAX_WATCHES = 20
+  const MAX_SEEN = 60
   const FOLDER_BY = [
     ['none', 'No extra folder'],
     ['uploader', 'Uploader or channel'],
@@ -124,6 +126,8 @@
     { key: 'siteFormats', type: 'map', default: {}, hidden: true },
     // Named combinations: [{ id, name, format, audioFormat ('' = your default), embedSubs, embedThumbnail }].
     { key: 'presets', type: 'presets', default: [], hidden: true },
+    // Channels and playlists checked for new uploads: [{ url, title, seen: [video ids] }].
+    { key: 'watches', type: 'watches', default: [], hidden: true },
   ]
 
   const BY_KEY = Object.fromEntries(FIELDS.map(field => [field.key, field]))
@@ -184,6 +188,16 @@
         }
         return [clean]
       }
+      case 'watches': {
+        if (!Array.isArray(value) || value.length > MAX_WATCHES) return [[], 'is not a list of channels']
+        const clean = []
+        for (const item of value) {
+          const ok = item && typeof item === 'object' && typeof item.url === 'string' && /^https?:\/\/\S{4,500}$/.test(item.url) && typeof item.title === 'string' && Array.isArray(item.seen) && item.seen.every(id => typeof id === 'string' && id.length <= 80)
+          if (!ok) return [[], 'has a channel that is not valid']
+          clean.push({ url: item.url, title: item.title.slice(0, 80), seen: item.seen.slice(-MAX_SEEN) })
+        }
+        return [clean]
+      }
       case 'map': {
         const entries = value && typeof value === 'object' && !Array.isArray(value) ? Object.entries(value) : null
         const ok = entries && entries.length <= 40 && entries.every(([site, format]) => /^[a-z0-9-]{1,30}$/.test(site) && FORMATS.some(([key]) => key === format))
@@ -236,5 +250,5 @@
     return validate(stored ?? {}, defaults()).settings
   }
 
-  return { TERMS_VERSION, FIELDS, BY_KEY, FORMATS, AUDIO_FORMATS, COOKIE_BROWSERS, FOLDER_BY, MAX_PRESETS, defaults, validate, sanitize }
+  return { TERMS_VERSION, FIELDS, BY_KEY, FORMATS, AUDIO_FORMATS, COOKIE_BROWSERS, FOLDER_BY, MAX_PRESETS, MAX_WATCHES, MAX_SEEN, defaults, validate, sanitize }
 })

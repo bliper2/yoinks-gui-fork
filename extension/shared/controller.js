@@ -454,14 +454,16 @@
       return [...new Set((String(text ?? '').match(/https?:\/\/[^\s<>"']+/g) ?? []).map(trimLink).filter(Boolean))].slice(0, 500)
     }
 
-    async function request(message, onReply) {
+    let watching = false
+
+    async function request(message, onReply, quiet = false) {
       try {
         const reply = await backend.request(message)
         onReply?.(reply)
         hostProblem = null
         return reply
       } catch (err) {
-        toast('error', err.message)
+        if (!quiet) toast('error', err.message)
         return null
       }
     }
@@ -678,6 +680,61 @@
           break
         case 'tick':
           return pump()
+
+        // --- watched channels: new uploads join the queue by themselves ---
+        case 'watch:add': {
+          const url = urlsFrom(cmd.url)[0]
+          if (!url) {
+            toast('error', 'That does not look like a link.')
+            break
+          }
+          if ((settings.watches ?? []).some(w => w.url === url)) {
+            toast('info', 'Already watching that.')
+            break
+          }
+          if ((settings.watches ?? []).length >= Schema.MAX_WATCHES) {
+            toast('error', `You can watch up to ${Schema.MAX_WATCHES} channels.`)
+            break
+          }
+          toast('info', 'Checking the channel…')
+          const reply = await request({ type: 'watch:check', url })
+          if (!reply) break
+          // Only uploads from now on: what is already there counts as seen.
+          const watch = { url, title: reply.title, seen: reply.entries.map(entry => entry.id) }
+          await request({ type: 'settings:set', patch: { watches: [...(settings.watches ?? []), watch] } }, applySettings)
+          toast('success', `Watching ${reply.title}. New uploads are added by themselves.`)
+          break
+        }
+        case 'watch:remove':
+          await request({ type: 'settings:set', patch: { watches: (settings.watches ?? []).filter(w => w.url !== cmd.url) } }, applySettings)
+          break
+        case 'watch:run': {
+          if (watching) return
+          watching = true
+          try {
+            let added = 0
+            for (const watch of settings.watches ?? []) {
+              const reply = await request({ type: 'watch:check', url: watch.url }, null, true)
+              if (!reply) continue
+              const fresh = reply.entries.filter(entry => !watch.seen.includes(entry.id)).slice(0, 10)
+              for (const entry of fresh.reverse()) {
+                newJob(entry.url, { wantFormat: defaultFormatFor(entry.url) })
+                added++
+              }
+              if (fresh.length) {
+                const current = (settings.watches ?? []).map(w => (w.url === watch.url ? { ...w, seen: [...w.seen, ...fresh.map(e => e.id)].slice(-Schema.MAX_SEEN) } : w))
+                await request({ type: 'settings:set', patch: { watches: current } }, applySettings, true)
+              }
+            }
+            if (added) {
+              toast('info', `${added} new upload${added === 1 ? '' : 's'} from watched channels added.`)
+              pump()
+            }
+          } finally {
+            watching = false
+          }
+          break
+        }
         case 'history:forget':
           history = history.filter(entry => entry.id !== cmd.entryId)
           saveHistory()

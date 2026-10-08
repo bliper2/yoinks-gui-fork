@@ -152,7 +152,35 @@
       const clipOn = h('input', { type: 'checkbox', id: 'clip-on', disabled: Boolean(job.playlistCount) })
       const start = h('input', { class: 'field field-sm', id: 'clip-start', type: 'text', inputmode: 'numeric', placeholder: '0:00', 'aria-label': 'Clip start' })
       const end = h('input', { class: 'field field-sm', id: 'clip-end', type: 'text', inputmode: 'numeric', placeholder: 'end', 'aria-label': 'Clip end' })
-      const times = h('div', { class: 'clip-times', hidden: true }, h('label', {}, 'From ', start), h('label', {}, 'to ', end))
+      // Trim handles: two sliders over the video's length, kept in step with the time boxes.
+      const total = Math.floor(job.duration ?? 0)
+      const lowHandle = h('input', { type: 'range', min: 0, max: total, value: 0, step: 1, 'aria-label': 'Clip start handle' })
+      const highHandle = h('input', { type: 'range', min: 0, max: total, value: total, step: 1, 'aria-label': 'Clip end handle' })
+      const handles = total > 1 ? h('div', { class: 'trim' }, lowHandle, highHandle) : null
+      if (handles) {
+        const fromHandles = () => {
+          let lo = Number(lowHandle.value)
+          let hi = Number(highHandle.value)
+          if (lo >= hi) {
+            if (document.activeElement === lowHandle) lo = lowHandle.value = Math.max(0, hi - 1)
+            else hi = highHandle.value = Math.min(total, lo + 1)
+          }
+          start.value = lo ? formatDuration(lo) : ''
+          end.value = hi >= total ? '' : formatDuration(hi)
+        }
+        lowHandle.addEventListener('input', fromHandles)
+        highHandle.addEventListener('input', fromHandles)
+        const fromBoxes = () => {
+          const s = parseTime(start.value)
+          const e = parseTime(end.value)
+          if (typeof s === 'number' && !Number.isNaN(s)) lowHandle.value = Math.min(s, total)
+          if (e === null) highHandle.value = total
+          else if (typeof e === 'number' && !Number.isNaN(e)) highHandle.value = Math.min(e, total)
+        }
+        start.addEventListener('input', fromBoxes)
+        end.addEventListener('input', fromBoxes)
+      }
+      const times = h('div', { class: 'clip-times', hidden: true }, h('label', {}, 'From ', start), h('label', {}, 'to ', end), handles)
       const remember = h('input', { type: 'checkbox', id: 'remember' })
       const siteName = job.site && !job.entries?.length ? Sites.SITES.find(site => site.id === job.site)?.name : null
       const rememberSite = siteName ? h('input', { type: 'checkbox', id: 'remember-site' }) : null
@@ -208,7 +236,10 @@
         if (!clipOn.checked || start.value) return
         const tab = await bridge.activeTab()
         const reply = tab ? await bridge.currentTime(tab.id) : null
-        if (reply?.time != null && Sites.sameMedia(reply.url, job.url)) start.value = formatDuration(Math.floor(reply.time))
+        if (reply?.time != null && Sites.sameMedia(reply.url, job.url)) {
+          start.value = formatDuration(Math.floor(reply.time))
+          start.dispatchEvent(new Event('input'))
+        }
         start.focus()
       })
 

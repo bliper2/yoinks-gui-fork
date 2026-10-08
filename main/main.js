@@ -193,6 +193,9 @@ if (!app.requestSingleInstanceLock()) {
     createWindow()
     updater.start(() => mainWindow)
     helper.register() // browser extension helper, no Node.js needed
+    // Watched channels: look for new uploads a minute after start, then every 30 minutes.
+    setTimeout(() => controller.command({ type: 'watch:run' }), 60_000)
+    setInterval(() => controller.command({ type: 'watch:run' }), 30 * 60_000)
   })
 }
 

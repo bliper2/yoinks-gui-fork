@@ -331,12 +331,40 @@ body {
 .options[open] summary {
   margin-bottom: 2px;
 }
+.search-hidden {
+  display: none !important;
+}
+.settings-search {
+  width: 100%;
+  margin: 0 0 12px;
+}
 .clip-times {
   display: flex;
   gap: 10px;
   padding: 2px 0 6px 24px;
   font-size: 12px;
   color: var(--text-muted);
+}
+.clip-times {
+  flex-wrap: wrap;
+}
+.trim {
+  position: relative;
+  flex-basis: 100%;
+  height: 24px;
+}
+.trim input[type='range'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  accent-color: var(--accent);
+}
+.trim input[type='range']::-webkit-slider-thumb,
+.trim input[type='range']::-moz-range-thumb {
+  pointer-events: auto;
 }
 .clip-times .field {
   width: 76px;
