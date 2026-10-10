@@ -19,6 +19,11 @@ const config = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config')
 // [browser profile folder, folder inside it that holds the manifests]
 const CHROMIUM = ['google-chrome', 'chromium', 'BraveSoftware/Brave-Browser', 'microsoft-edge', 'vivaldi'].map(name => [path.join(config, name), path.join(config, name, 'NativeMessagingHosts')])
 const GECKO = ['.mozilla', '.waterfox', '.librewolf'].map(name => [path.join(os.homedir(), name), path.join(os.homedir(), name, 'native-messaging-hosts')])
+// Newer Firefox keeps its profile under the XDG config folder; write to both manifest locations.
+GECKO.push(
+  [path.join(config, 'mozilla'), path.join(config, 'mozilla', 'native-messaging-hosts')],
+  [path.join(config, 'mozilla'), path.join(os.homedir(), '.mozilla', 'native-messaging-hosts')],
+)
 
 const manifestFile = dir => path.join(dir, `${HOST_NAME}.json`)
 
@@ -35,6 +40,7 @@ function register({ launcher, chromeOrigin, geckoId }) {
   ]) {
     for (const [profile, dir] of list) {
       if (!fs.existsSync(profile)) continue
+      if (written.includes(manifestFile(dir))) continue
       fs.mkdirSync(dir, { recursive: true })
       fs.writeFileSync(manifestFile(dir), JSON.stringify({ ...host, ...extra }, null, 2))
       written.push(manifestFile(dir))
