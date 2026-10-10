@@ -46,8 +46,14 @@
   <main>
     <h1>Changelog</h1>
     <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v2.4.1">
+      <h2>2.4.1 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>Fixed (Linux): the browser helper is now registered for Firefox profiles stored in ~/.config/mozilla, so &quot;npm run extension:install&quot; no longer reports that no browser was found.</li>
+      </ul>
+    </section>
     <section class="release" id="v2.4.0">
-      <h2>2.4.0 <span class="latest">Latest</span></h2>
+      <h2>2.4.0</h2>
       <ul>
         <li>Watched channels (Windows, Linux, extension): add a channel or playlist link in Settings, Queue. Yoinks checks it every 30 minutes while it is open and downloads new uploads by itself, in your default quality. Only uploads from after you add it are downloaded.</li>
         <li>Trim handles: when you choose &quot;Only a clip&quot;, drag two sliders over the video's length instead of typing times. The time boxes still work and stay in step.</li>

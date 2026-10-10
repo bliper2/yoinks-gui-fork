@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1
+
+- Fixed (Linux): the browser helper is now registered for Firefox profiles stored in ~/.config/mozilla, so "npm run extension:install" no longer reports that no browser was found.
+
 ## 2.4.0
 
 - Watched channels (Windows, Linux, extension): add a channel or playlist link in Settings, Queue. Yoinks checks it every 30 minutes while it is open and downloads new uploads by itself, in your default quality. Only uploads from after you add it are downloaded.
