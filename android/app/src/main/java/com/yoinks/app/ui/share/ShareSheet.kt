@@ -21,7 +21,10 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -56,8 +59,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.yoinks.app.domain.format.ClipRules
+import com.yoinks.app.domain.format.FormatPicker
 import com.yoinks.app.domain.model.Clip
 import com.yoinks.app.domain.model.Confidence
+import com.yoinks.app.domain.model.DownloadOverrides
+import com.yoinks.app.domain.model.DownloadPreset
 import com.yoinks.app.domain.model.FormatOption
 import com.yoinks.app.domain.model.LinkRules
 import com.yoinks.app.domain.model.MediaInfo
@@ -77,7 +84,7 @@ import com.yoinks.app.ui.theme.YoinksTheme
 /** Callbacks from the sheet to [ShareViewModel]. */
 class SheetActions(
     val close: () -> Unit,
-    val download: (MediaInfo, FormatOption, Clip?, List<Int>?, Boolean) -> Unit,
+    val download: (MediaInfo, FormatOption, Clip?, List<Int>?, Boolean, DownloadOverrides?) -> Unit,
     val wholePlaylist: (String) -> Unit,
     val downloadSpotify: (String, SpotifyLookup, List<Int>) -> Unit,
     val retry: (String) -> Unit,
@@ -87,21 +94,21 @@ class SheetActions(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShareSheetHost(state: SheetState, actions: SheetActions) {
+fun ShareSheetHost(state: SheetState, actions: SheetActions, presets: List<DownloadPreset> = emptyList()) {
     if (state == SheetState.Hidden) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(onDismissRequest = actions.close, sheetState = sheetState) {
-        ShareSheetContent(state, actions, Modifier.navigationBarsPadding())
+        ShareSheetContent(state, actions, Modifier.navigationBarsPadding(), presets)
     }
 }
 
 @Composable
-fun ShareSheetContent(state: SheetState, actions: SheetActions, modifier: Modifier = Modifier) {
+fun ShareSheetContent(state: SheetState, actions: SheetActions, modifier: Modifier = Modifier, presets: List<DownloadPreset> = emptyList()) {
     Column(modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
         when (state) {
             SheetState.Hidden -> Unit
             is SheetState.Working -> Working(state.status, actions.close)
-            is SheetState.Media -> MediaOptions(state.info, actions)
+            is SheetState.Media -> MediaOptions(state.info, actions, presets)
             is SheetState.Spotify -> SpotifyMatches(state.url, state.lookup, actions)
             is SheetState.Results -> Results(state.query, state.results, actions)
             is SheetState.Failed -> Failed(state.url, state.error, actions)
@@ -131,7 +138,7 @@ private fun Header(title: String, subtitle: String, thumbnail: String?, audio: B
 }
 
 @Composable
-private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
+private fun MediaOptions(info: MediaInfo, actions: SheetActions, presets: List<DownloadPreset>) {
     var selected by rememberSaveable(info.url, info.isPlaylist) { mutableIntStateOf(info.defaultIndex) }
     var clipOn by rememberSaveable { mutableStateOf(false) }
     var start by rememberSaveable { mutableStateOf("") }
@@ -139,6 +146,7 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
     var clipError by remember { mutableStateOf<String?>(null) }
     var button by remember { mutableStateOf<ActionState>(ActionState.Idle) }
     var rememberSite by rememberSaveable { mutableStateOf(false) }
+    var overrides by remember { mutableStateOf<DownloadOverrides?>(null) }
     val picked = remember(info.url, info.entries.size) { mutableStateListOf(*Array(info.entries.size) { true }) }
     var pickOpen by rememberSaveable { mutableStateOf(false) }
     var pickError by remember { mutableStateOf<String?>(null) }
@@ -147,6 +155,23 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
     val subtitle = listOfNotNull(info.uploader, info.playlistCount?.let { "$it items" } ?: info.durationSeconds?.let(Formatters::duration)).joinToString(" · ")
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         item { Header(info.title, subtitle, info.thumbnail, info.platform.isMusic, info.platform.displayName) }
+        if (presets.isNotEmpty()) {
+            item {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Presets", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+                    presets.forEach { preset ->
+                        AssistChip(
+                            onClick = {
+                                val index = FormatPicker.pick(info.formats, preset.format)
+                                if (index >= 0) selected = index
+                                overrides = preset.overrides()
+                            },
+                            label = { Text(preset.name) },
+                        )
+                    }
+                }
+            }
+        }
         if (info.isSlideshow) {
             item { Note("TikTok photo slideshows: yt-dlp can only save the sound, not the photos.") }
         }
@@ -219,6 +244,22 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
                         OutlinedTextField(start, { start = it; clipError = null }, label = { Text("From (1:05)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                         OutlinedTextField(end, { end = it; clipError = null }, label = { Text("To (blank = end)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                     }
+                    val duration = info.durationSeconds
+                    if (duration != null && duration > 0) {
+                        val max = duration.toFloat()
+                        val startSec = (ClipRules.parseTime(start)?.takeUnless { it.isNaN() } ?: 0.0).toFloat().coerceIn(0f, max)
+                        val endParsed = ClipRules.parseTime(end)?.takeUnless { it.isNaN() }
+                        val endSec = (endParsed ?: duration.toDouble()).toFloat().coerceIn(startSec, max)
+                        RangeSlider(
+                            value = startSec..endSec,
+                            onValueChange = { range ->
+                                start = Formatters.duration(range.start.toLong())
+                                end = Formatters.duration(range.endInclusive.toLong())
+                                clipError = null
+                            },
+                            valueRange = 0f..max,
+                        )
+                    }
                     clipError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
             }
@@ -243,12 +284,9 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
                 enabled = info.formats.isNotEmpty(),
                 onClick = {
                     val clip = if (clipOn && !info.isPlaylist) {
-                        val s = Formatters.parseTime(start) ?: 0.0
-                        val e = Formatters.parseTime(end)
-                        when {
-                            s.isNaN() || e?.isNaN() == true -> { clipError = "Write times like 1:05 or 65."; return@StateButton }
-                            e != null && e <= s -> { clipError = "The clip has to end after it starts."; return@StateButton }
-                            else -> Clip(s, e)
+                        when (val parsed = ClipRules.fromFields(start, end)) {
+                            is ClipRules.Result.Invalid -> { clipError = parsed.message; return@StateButton }
+                            is ClipRules.Result.Ok -> parsed.clip
                         }
                     } else null
                     var items: List<Int>? = null
@@ -258,7 +296,7 @@ private fun MediaOptions(info: MediaInfo, actions: SheetActions) {
                         if (chosen.size < info.entries.size) items = chosen
                     }
                     button = ActionState.Done
-                    actions.download(info, info.formats[selected.coerceIn(0, info.formats.lastIndex)], clip, items, rememberSite && canRememberSite)
+                    actions.download(info, info.formats[selected.coerceIn(0, info.formats.lastIndex)], clip, items, rememberSite && canRememberSite, overrides)
                 },
             )
         }
@@ -415,7 +453,7 @@ private fun Note(text: String) {
     }
 }
 
-private val previewActions = SheetActions({}, { _, _, _, _, _ -> }, {}, { _, _, _ -> }, {})
+private val previewActions = SheetActions({}, { _, _, _, _, _, _ -> }, {}, { _, _, _ -> }, {})
 
 @Preview(name = "Sheet – video", widthDp = 400, heightDp = 800, showBackground = true)
 @Composable

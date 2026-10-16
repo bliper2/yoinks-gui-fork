@@ -3,7 +3,12 @@ package com.yoinks.app
 import com.yoinks.app.data.engine.InfoParser
 import com.yoinks.app.data.engine.YtDlpArgs
 import com.yoinks.app.domain.errors.ErrorTranslator
+import com.yoinks.app.domain.engine.OutputFiles
+import com.yoinks.app.domain.format.ClipRules
 import com.yoinks.app.domain.format.FilenameTemplate
+import com.yoinks.app.domain.model.DownloadOverrides
+import com.yoinks.app.domain.model.DownloadPreset
+import com.yoinks.app.domain.queue.QueueRecords
 import com.yoinks.app.domain.format.FormatPicker
 import com.yoinks.app.domain.health.HealthRules
 import com.yoinks.app.domain.health.HealthStatus
@@ -58,7 +63,8 @@ class NewFeaturesTest {
         assertEquals("Waiting (battery is low)", gate(AppSettings(pauseOnLowBattery = true), battery = 10))
         assertNull("charging is fine", gate(AppSettings(pauseOnLowBattery = true), battery = 10, charging = true))
         assertNull("setting off", gate(AppSettings(pauseOnLowBattery = false), battery = 5))
-        assertEquals("Waiting for 01:00", gate(AppSettings(scheduleOn = true), now = LocalTime.NOON))
+        assertEquals("Waiting until 01:00 tomorrow", gate(AppSettings(scheduleOn = true), now = LocalTime.NOON))
+        assertEquals("Waiting until 01:00", gate(AppSettings(scheduleOn = true), now = LocalTime.of(0, 30)))
     }
 
     // ---------- settings ----------
@@ -130,6 +136,56 @@ class NewFeaturesTest {
         assertEquals(listOf("One", "Two", "Untitled"), info.entries.map { it.title })
         assertEquals(61L, info.entries.first().durationSeconds)
         assertTrue(InfoParser.parse(json, """{"title":"x","formats":[]}""", "https://youtu.be/x", AppSettings()).entries.isEmpty())
+    }
+
+    @Test fun rememberedQualityIsTheHighlightedDefault() {
+        val raw = """{"title":"V","formats":[
+            {"vcodec":"avc1","acodec":"none","height":1080,"ext":"mp4"},
+            {"vcodec":"avc1","acodec":"none","height":720,"ext":"mp4"},
+            {"vcodec":"none","acodec":"mp4a","abr":128,"ext":"m4a"}]}"""
+        val info = InfoParser.parse(json, raw, "https://www.youtube.com/watch?v=x", AppSettings(siteFormats = mapOf("youtube" to "720")))
+        assertEquals("720p", info.formats[info.defaultIndex].label)
+    }
+
+    @Test fun anEmptyClipIsRejectedAndAPhotoIsKept() {
+        assertTrue(ClipRules.fromFields("", "") is ClipRules.Result.Invalid)
+        val clip = ClipRules.fromFields("1:05", "")
+        assertTrue(clip is ClipRules.Result.Ok)
+        assertEquals(65.0, (clip as ClipRules.Result.Ok).clip.startSeconds, 0.01)
+        assertEquals(null, clip.clip.endSeconds)
+        assertEquals(listOf("song.mp3"), OutputFiles.finished(listOf("song.mp3", "song.jpg", "song.info.json")))
+        assertEquals(listOf("photo.jpg"), OutputFiles.finished(listOf("photo.jpg", "photo.info.json")))
+    }
+
+    @Test fun aPresetCanTurnTagsOffForOneDownload() {
+        val request = DownloadRequest(
+            "https://youtu.be/x",
+            "t",
+            format = "audio",
+            overrides = DownloadOverrides(audioFormat = "flac", embedMetadata = false, splitChapters = true),
+        )
+        val args = YtDlpArgs.download(request, AppSettings(embedMetadata = true, splitChapters = false), Platform.YOUTUBE, java.io.File("/out"), null)
+        assertTrue(args.contains("--audio-format"))
+        assertEquals("flac", args[args.indexOf("--audio-format") + 1])
+        assertFalse(args.contains("--embed-metadata"))
+        assertTrue(args.contains("--split-chapters"))
+        val cleaned = SettingsValidator.sanitize(
+            AppSettings(presets = listOf(DownloadPreset("bad id", "  Music  ", "audio", "flac"))),
+        )
+        assertTrue(cleaned.presets.isEmpty())
+        val kept = SettingsValidator.sanitize(
+            AppSettings(presets = listOf(DownloadPreset("flac1", "  Music FLAC  ", "audio", "flac"))),
+        )
+        assertEquals("Music FLAC", kept.presets.single().name)
+    }
+
+    @Test fun aFailedJobStaysFailedAndARetryKeepsWaiting() {
+        assertEquals(QueueRecords.FAILED, QueueRecords.storedPhase(com.yoinks.app.domain.model.JobPhase.FAILED, 0))
+        assertEquals(QueueRecords.RETRY, QueueRecords.storedPhase(com.yoinks.app.domain.model.JobPhase.QUEUED, 50))
+        assertEquals(QueueRecords.PAUSED, QueueRecords.storedPhase(com.yoinks.app.domain.model.JobPhase.DOWNLOADING, 0))
+        assertEquals(com.yoinks.app.domain.model.JobPhase.FAILED, QueueRecords.restoredPhase(QueueRecords.FAILED))
+        assertEquals(com.yoinks.app.domain.model.JobPhase.QUEUED, QueueRecords.restoredPhase(QueueRecords.RETRY))
+        assertEquals(com.yoinks.app.domain.model.JobPhase.PAUSED, QueueRecords.restoredPhase(QueueRecords.PAUSED))
     }
 
     @Test fun searchResultsAreReadFromTheFlatList() {

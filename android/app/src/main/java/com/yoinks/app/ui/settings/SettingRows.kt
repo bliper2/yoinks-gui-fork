@@ -35,9 +35,18 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/** A settings card grouping rows under a heading. */
+/** Every word of [query] must appear in the title or the extra words. An empty query matches. */
+fun settingsQueryMatches(query: String, vararg parts: String): Boolean {
+    val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.isEmpty()) return true
+    val haystack = parts.joinToString(" ").lowercase()
+    return words.all { haystack.contains(it) }
+}
+
+/** A settings card grouping rows under a heading. Hidden when a settings search misses it. */
 @Composable
-fun SettingsGroup(title: String, content: @Composable () -> Unit) {
+fun SettingsGroup(title: String, query: String = "", keywords: String = "", content: @Composable () -> Unit) {
+    if (!settingsQueryMatches(query, title, keywords)) return
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         com.yoinks.app.ui.components.SectionHeader(title, Modifier.padding(start = 0.dp))
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {

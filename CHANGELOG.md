@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.0
+
+- Fixed (Windows and Linux): a stuck yt-dlp check no longer hangs Yoinks. Version checks, health checks and updates stop if they take too long.
+- Fixed (Linux): cancelling or pausing a download also stops ffmpeg, so a merge does not keep running after you stop it.
+- Fixed (Linux): Show in folder selects the file when Files, Nautilus or Dolphin is installed. Long folder paths are accepted, and file name previews use the right slash.
+- Fixed: pausing a download while Yoinks is still looking the link up now pauses it. Resume looks it up again.
+- Fixed: a report copied from the Linux app says Linux app.
+- Presets can also remember tags and chapter splitting (Windows, Linux, the extension and Android). Presets you already saved keep working.
+- Android: search in Settings, download presets, and clip sliders when the video length is known. Turning on "Only a clip" with both times empty no longer downloads the whole video as a clip.
+- Android: Reset keeps the folders you picked. A failed download stays failed after the app is closed, and a retry keeps its wait. Photo posts save the picture. The format list highlights the quality you remembered for that site. The download window says when it next opens.
+
 ## 2.4.1
 
 - Fixed (Linux): the browser helper is now registered for Firefox profiles stored in ~/.config/mozilla, so "npm run extension:install" no longer reports that no browser was found.

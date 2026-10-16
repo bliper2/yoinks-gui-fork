@@ -173,6 +173,7 @@ class MainActivity : ComponentActivity() {
                     }
                 },
             ),
+            presets = settings.presets,
         )
     }
 

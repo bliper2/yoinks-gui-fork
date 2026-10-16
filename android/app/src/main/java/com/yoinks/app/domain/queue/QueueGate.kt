@@ -21,6 +21,16 @@ object DownloadWindow {
         val t = now.hour * 60 + now.minute
         return if (from < to) t in from until to else t >= from || t < to
     }
+
+    /** What to say while the window is closed. After today's window, the next open is tomorrow. */
+    fun closedMessage(settings: AppSettings, now: LocalTime): String {
+        val from = settings.scheduleFrom
+        val fromMin = minutes(from) ?: return "Waiting until $from"
+        val toMin = minutes(settings.scheduleTo) ?: return "Waiting until $from"
+        val t = now.hour * 60 + now.minute
+        val tomorrow = fromMin < toMin && t >= toMin
+        return if (tomorrow) "Waiting until $from tomorrow" else "Waiting until $from"
+    }
 }
 
 /**
@@ -44,7 +54,7 @@ object QueueGate {
         settings.wifiOnly && !unmetered -> "Waiting for Wi-Fi"
         settings.respectDataSaver && dataSaverOn && !unmetered -> "Waiting (Data Saver is on)"
         settings.pauseOnLowBattery && batteryPercent != null && batteryPercent <= LOW_BATTERY_PERCENT && !charging -> "Waiting (battery is low)"
-        !DownloadWindow.isOpen(settings, now) -> "Waiting for ${settings.scheduleFrom}"
+        !DownloadWindow.isOpen(settings, now) -> DownloadWindow.closedMessage(settings, now)
         else -> null
     }
 }

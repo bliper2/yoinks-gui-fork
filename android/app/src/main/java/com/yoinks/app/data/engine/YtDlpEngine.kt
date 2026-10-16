@@ -10,6 +10,7 @@ import com.yausername.youtubedl_android.YoutubeDLResponse
 import com.yoinks.app.data.cookies.CookieStore
 import com.yoinks.app.data.spotify.SpotifyMetadata
 import com.yoinks.app.domain.engine.MediaEngine
+import com.yoinks.app.domain.engine.OutputFiles
 import com.yoinks.app.domain.engine.StoppedException
 import com.yoinks.app.domain.engine.UpdateResult
 import com.yoinks.app.domain.errors.ErrorTranslator
@@ -234,18 +235,17 @@ class YtDlpEngine @Inject constructor(
         UpdateResult(after, updated, if (updated) "Updated yt-dlp to $after." else "yt-dlp is already up to date ($before).")
     }
 
-    /** Media files yt-dlp left in [dir] (not partials, temp or info files). */
-    private fun finishedFiles(dir: File): List<File> =
-        dir.walkTopDown()
-            .filter { it.isFile && !it.name.startsWith(".") }
-            .filterNot { f -> PARTIAL.any { f.name.endsWith(it) } }
-            .toList()
+    /** Media files yt-dlp left in [dir]. Thumbnails are kept only when the post is a picture. */
+    private fun finishedFiles(dir: File): List<File> {
+        val files = dir.walkTopDown().filter { it.isFile }.toList()
+        val byRelative = files.associateBy { it.relativeTo(dir).invariantSeparatorsPath }
+        return OutputFiles.finished(byRelative.keys.toList()).mapNotNull { byRelative[it] }
+    }
 
     private companion object {
         const val AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000L
         const val NIGHTLY_EVERY_MS = 60 * 60 * 1000L
         val SEARCH_URL = Regex("^ytsearch[0-9]{1,2}:.+")
         val RETRY_AFTER_UPDATE = setOf("outdated", "login", "forbidden")
-        val PARTIAL = listOf(".part", ".ytdl", ".json", ".temp", ".tmp", ".webp", ".jpg", ".png", ".vtt", ".srt")
     }
 }

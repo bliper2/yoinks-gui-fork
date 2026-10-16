@@ -115,6 +115,8 @@ data class AppSettings(
     val useCookies: Boolean = false,
     // Remembered quality per website: "youtube" -> "720", "soundcloud" -> "audio".
     val siteFormats: Map<String, String> = emptyMap(),
+    /** Named download combinations, picked with one tap on the format list. */
+    val presets: List<DownloadPreset> = emptyList(),
     // First run, and the version whose "what's new" was shown ("" = fresh install).
     val termsAccepted: Int = 0,
     val lastSeenVersion: String = "",

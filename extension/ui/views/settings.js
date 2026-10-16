@@ -6,7 +6,7 @@
  */
 ;(function (root) {
   'use strict'
-  const { h, icon, button, copyText } = root.YoinksDom
+  const { h, icon, button, copyText, placeLabel } = root.YoinksDom
   const Schema = root.YoinksSettings
   const Template = root.YoinksTemplate
   const Theme = root.YoinksTheme
@@ -215,14 +215,16 @@
     extras.presets = h('div', { class: 'setting setting-wide preset-editor' })
     sections.get('Downloads').push(extras.presets)
 
-    const presetName = h('input', { class: 'field', type: 'text', maxlength: 24, placeholder: 'Name, e.g. Music FLAC', 'aria-label': 'Preset name' })
+      const presetName = h('input', { class: 'field', type: 'text', maxlength: 24, placeholder: 'Name, e.g. Music FLAC', 'aria-label': 'Preset name' })
     const presetFormat = h('select', { class: 'field', 'aria-label': 'Preset quality' }, Schema.FORMATS.map(([value, text]) => h('option', { value, text })))
     const presetAudio = h('select', { class: 'field', 'aria-label': 'Preset audio format' }, h('option', { value: '', text: 'Audio: my default' }), Schema.AUDIO_FORMATS.map(([value, text]) => h('option', { value, text: `Audio: ${text}` })))
     const presetSubs = h('input', { type: 'checkbox' })
     const presetCover = h('input', { type: 'checkbox', checked: true })
+    const presetTags = h('input', { type: 'checkbox', checked: true })
+    const presetChapters = h('input', { type: 'checkbox' })
     const presetError = h('p', { class: 'inline-error', role: 'alert', hidden: true })
     const addPreset = () => {
-      const preset = { id: Math.random().toString(36).slice(2, 8), name: presetName.value.trim(), format: presetFormat.value, audioFormat: presetAudio.value, embedSubs: presetSubs.checked, embedThumbnail: presetCover.checked }
+      const preset = { id: Math.random().toString(36).slice(2, 8), name: presetName.value.trim(), format: presetFormat.value, audioFormat: presetAudio.value, embedSubs: presetSubs.checked, embedThumbnail: presetCover.checked, embedMetadata: presetTags.checked, splitChapters: presetChapters.checked }
       const { errors } = Schema.validate({ presets: [...(settings.presets ?? []), preset] }, settings)
       presetError.textContent = !preset.name ? 'Give the preset a name.' : (errors.presets ?? '')
       presetError.hidden = !presetError.textContent
@@ -253,7 +255,7 @@
             { class: 'preset-form' },
             presetName,
             h('div', { class: 'row wrap' }, presetFormat, presetAudio),
-            h('div', { class: 'row wrap' }, h('label', { class: 'check' }, presetSubs, 'Subtitles'), h('label', { class: 'check' }, presetCover, 'Cover art')),
+            h('div', { class: 'row wrap' }, h('label', { class: 'check' }, presetSubs, 'Subtitles'), h('label', { class: 'check' }, presetCover, 'Cover art'), h('label', { class: 'check' }, presetTags, 'Tags'), h('label', { class: 'check' }, presetChapters, 'Split chapters')),
             button({ icon: 'check', text: 'Save preset', variant: 'secondary', size: 'sm', onClick: addPreset, disabled: list.length >= Schema.MAX_PRESETS }),
             presetError,
           ),
@@ -307,7 +309,7 @@
           'p',
           {},
           h('strong', { text: 'About browser cookies: ' }),
-          'when turned on, yt-dlp reads your login cookies from the chosen browser on this PC and sends them only to the site you are downloading from, so it sees you as signed in. Nothing is sent anywhere else or stored by Yoinks. Chrome and Edge lock their cookies while running (close them first); Firefox works best.',
+          'when turned on, yt-dlp reads your login cookies from the chosen browser on this computer and sends them only to the site you are downloading from, so it sees you as signed in. Nothing is sent anywhere else or stored by Yoinks. Chrome and Edge lock their cookies while running (close them first); Firefox works best.',
         ),
       ),
     )
@@ -384,7 +386,7 @@
       onClick: async () => {
         const report = lastHealth
         if (!report) return
-        const lines = [`Yoinks ${bridge.version ?? '?'} (${bridge.platform === 'desktop' ? 'Windows app' : 'browser extension'}) health check`, ...report.checks.map(c => `${c.status.toUpperCase()}  ${c.label}: ${c.detail}`)]
+        const lines = [`Yoinks ${bridge.version ?? '?'} (${placeLabel(bridge)}) health check`, ...report.checks.map(c => `${c.status.toUpperCase()}  ${c.label}: ${c.detail}`)]
         const ok = await copyText(lines.join('\n'))
         send({ type: 'toast', kind: ok ? 'success' : 'error', text: ok ? 'Results copied. Paste them in Discord or a GitHub issue.' : 'Could not copy.' })
       },

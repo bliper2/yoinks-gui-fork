@@ -395,6 +395,8 @@ function validOverrides(raw) {
   if (Schema.AUDIO_FORMATS.some(([key]) => key === raw.audioFormat)) out.audioFormat = raw.audioFormat
   if (typeof raw.embedSubs === 'boolean') out.embedSubs = raw.embedSubs
   if (typeof raw.embedThumbnail === 'boolean') out.embedThumbnail = raw.embedThumbnail
+  if (typeof raw.embedMetadata === 'boolean') out.embedMetadata = raw.embedMetadata
+  if (typeof raw.splitChapters === 'boolean') out.splitChapters = raw.splitChapters
   return out
 }
 

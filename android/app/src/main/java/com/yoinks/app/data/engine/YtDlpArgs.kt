@@ -67,6 +67,7 @@ object YtDlpArgs {
         forceTags: Boolean = false,
         playlistNames: Boolean = request.playlist,
     ): List<String> {
+        val settings = applyOverrides(settings, request)
         val args = format(request, settings, platform).toMutableList()
         val audio = request.kind == MediaKind.AUDIO
         val music = platform.isMusic || forceTags
@@ -100,6 +101,18 @@ object YtDlpArgs {
         val template = FilenameTemplate.toYtdlp(settings.filenameTemplate, playlistNames, settings.playlistFolder, settings.playlistNumbered, suffix, settings.folderBy)
         args += listOf("-o", File(outputDir, template).absolutePath)
         return args
+    }
+
+    private fun applyOverrides(settings: AppSettings, request: DownloadRequest): AppSettings {
+        val over = request.overrides ?: return settings
+        val audio = over.audioFormat?.let { ext -> AudioFormat.entries.firstOrNull { it.ext == ext } }
+        return settings.copy(
+            audioFormat = audio ?: settings.audioFormat,
+            embedMetadata = over.embedMetadata ?: settings.embedMetadata,
+            embedThumbnail = over.embedThumbnail ?: settings.embedThumbnail,
+            embedSubs = over.embedSubs ?: settings.embedSubs,
+            splitChapters = over.splitChapters ?: settings.splitChapters,
+        )
     }
 
     private fun clock(seconds: Double): String {

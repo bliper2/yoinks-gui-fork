@@ -52,15 +52,24 @@
    * "Rick Astley - Never Gonna Give You Up.mp3". With playlist options the
    * folder and number are shown too.
    */
+  function folderSep() {
+    try {
+      if (typeof process !== 'undefined' && process.platform) return process.platform === 'win32' ? '\\' : '/'
+    } catch { /* a browser page has no process */ }
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+    return /Windows/i.test(ua) ? '\\' : '/'
+  }
+
   function preview(template, { ext = 'mp4', playlist = false, folder = true, numbered = true, folderBy = 'none' } = {}) {
     const error = validate(template)
     if (error) return { error: `File name ${error}.` }
     const sample = Object.fromEntries(Object.entries(TOKENS).map(([k, v]) => [k, v.sample]))
+    const sep = folderSep()
     let name = `${render(template, sample)}.${ext}`
     if (playlist && numbered) name = `001 - ${name}`
-    if (playlist && folder) name = `My Playlist\\${name}`
-    if (folderBy === 'uploader') name = `Rick Astley\\${name}`
-    else if (folderBy === 'site') name = `Youtube\\${name}`
+    if (playlist && folder) name = `My Playlist${sep}${name}`
+    if (folderBy === 'uploader') name = `Rick Astley${sep}${name}`
+    else if (folderBy === 'site') name = `Youtube${sep}${name}`
     return { name }
   }
 

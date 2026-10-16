@@ -27,4 +27,5 @@ contextBridge.exposeInMainWorld('yoinksDesktop', {
   minimize: () => ipcRenderer.send('window:minimize'),
   close: () => ipcRenderer.send('window:close'),
   version: ipcRenderer.sendSync('yoinks:version'),
+  os: process.platform,
 })

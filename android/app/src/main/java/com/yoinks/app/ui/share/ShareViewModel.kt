@@ -12,6 +12,7 @@ import com.yoinks.app.domain.format.FormatPicker
 import com.yoinks.app.domain.link.LinkExtractor
 import com.yoinks.app.domain.model.AppSettings
 import com.yoinks.app.domain.model.Clip
+import com.yoinks.app.domain.model.DownloadOverrides
 import com.yoinks.app.domain.model.DownloadRequest
 import com.yoinks.app.domain.model.FormatOption
 import com.yoinks.app.domain.model.LinkRules
@@ -192,7 +193,7 @@ class ShareViewModel @Inject constructor(
     fun retry(url: String) = start(url, instant = false)
 
     /** [items]: the picked playlist videos (1-based), null for all. [rememberSite]: use this quality for this website from now on. */
-    fun download(info: MediaInfo, option: FormatOption, clip: Clip?, items: List<Int>? = null, rememberSite: Boolean = false) {
+    fun download(info: MediaInfo, option: FormatOption, clip: Clip?, items: List<Int>? = null, rememberSite: Boolean = false, overrides: DownloadOverrides? = null) {
         queue.enqueue(
             listOf(
                 DownloadRequest(
@@ -204,6 +205,7 @@ class ShareViewModel @Inject constructor(
                     playlist = info.isPlaylist,
                     items = if (info.isPlaylist) items else null,
                     clip = if (info.isPlaylist) null else clip,
+                    overrides = overrides,
                 ),
             ),
         )

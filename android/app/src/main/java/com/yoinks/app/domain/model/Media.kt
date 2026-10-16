@@ -43,6 +43,40 @@ data class SearchResult(val url: String, val title: String, val uploader: String
 @Serializable
 data class Clip(val startSeconds: Double, val endSeconds: Double?)
 
+/** Settings a preset changes for one download. Null fields keep the app default. */
+@Serializable
+data class DownloadOverrides(
+    val audioFormat: String? = null,
+    val embedMetadata: Boolean? = null,
+    val embedThumbnail: Boolean? = null,
+    val embedSubs: Boolean? = null,
+    val splitChapters: Boolean? = null,
+)
+
+/**
+ * A named combination (quality, audio format, tags). Same idea as the desktop app.
+ * [audioFormat] empty means "use my default".
+ */
+@Serializable
+data class DownloadPreset(
+    val id: String,
+    val name: String,
+    val format: String,
+    val audioFormat: String = "",
+    val embedSubs: Boolean = false,
+    val embedThumbnail: Boolean = true,
+    val embedMetadata: Boolean = true,
+    val splitChapters: Boolean = false,
+) {
+    fun overrides(): DownloadOverrides = DownloadOverrides(
+        audioFormat = audioFormat.ifBlank { null },
+        embedMetadata = embedMetadata,
+        embedThumbnail = embedThumbnail,
+        embedSubs = embedSubs,
+        splitChapters = splitChapters,
+    )
+}
+
 /** What the user asked to download. Plain data so it survives in the queue. */
 @Serializable
 data class DownloadRequest(
@@ -59,6 +93,7 @@ data class DownloadRequest(
     val clip: Clip? = null,
     /** Set for Spotify links: the confirmed YouTube Music matches. */
     val spotify: List<SpotifyPick>? = null,
+    val overrides: DownloadOverrides? = null,
 ) {
     val kind: MediaKind get() = if (format == "audio" || spotify != null) MediaKind.AUDIO else MediaKind.VIDEO
 }

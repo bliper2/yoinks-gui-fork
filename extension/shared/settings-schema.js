@@ -124,7 +124,7 @@
     { key: 'lastSeenVersion', type: 'text', default: '', maxLength: 20, hidden: true },
     // Remembered quality per website: { youtube: '720', soundcloud: 'audio' }.
     { key: 'siteFormats', type: 'map', default: {}, hidden: true },
-    // Named combinations: [{ id, name, format, audioFormat ('' = your default), embedSubs, embedThumbnail }].
+    // Named combinations: [{ id, name, format, audioFormat ('' = your default), embedSubs, embedThumbnail, embedMetadata, splitChapters }].
     { key: 'presets', type: 'presets', default: [], hidden: true },
     // Channels and playlists checked for new uploads: [{ url, title, seen: [video ids] }].
     { key: 'watches', type: 'watches', default: [], hidden: true },
@@ -158,7 +158,8 @@
       case 'folder':
         if (value === '') return ['']
         // Absolute Windows (C:\…, \\server\share) or POSIX path, no control chars.
-        return typeof value === 'string' && value.length < 260 && !/[\u0000-\u001f"<>|?*]/.test(value.replace(/^[A-Za-z]:/, '')) && /^([A-Za-z]:[\\/]|\\\\|\/)/.test(value)
+        // Long enough for a deep Linux home path. Windows still cannot use every path this long.
+        return typeof value === 'string' && value.length < 4096 && !/[\u0000-\u001f"<>|?*]/.test(value.replace(/^[A-Za-z]:/, '')) && /^([A-Za-z]:[\\/]|\\\\|\/)/.test(value)
           ? [value]
           : [field.default, 'must be a full folder path']
       case 'template': {
@@ -182,9 +183,20 @@
             FORMATS.some(([key]) => key === item.format) &&
             (item.audioFormat === '' || AUDIO_FORMATS.some(([key]) => key === item.audioFormat)) &&
             typeof item.embedSubs === 'boolean' &&
-            typeof item.embedThumbnail === 'boolean'
+            typeof item.embedThumbnail === 'boolean' &&
+            (item.embedMetadata === undefined || typeof item.embedMetadata === 'boolean') &&
+            (item.splitChapters === undefined || typeof item.splitChapters === 'boolean')
           if (!ok) return [[], 'has a preset that is not valid']
-          clean.push({ id: item.id, name: item.name.trim(), format: item.format, audioFormat: item.audioFormat, embedSubs: item.embedSubs, embedThumbnail: item.embedThumbnail })
+          clean.push({
+            id: item.id,
+            name: item.name.trim(),
+            format: item.format,
+            audioFormat: item.audioFormat,
+            embedSubs: item.embedSubs,
+            embedThumbnail: item.embedThumbnail,
+            embedMetadata: typeof item.embedMetadata === 'boolean' ? item.embedMetadata : true,
+            splitChapters: item.splitChapters === true,
+          })
         }
         return [clean]
       }

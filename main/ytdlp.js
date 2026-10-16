@@ -54,26 +54,47 @@ function ytDlpAssetName() {
   return process.arch === 'arm64' ? 'yt-dlp_linux_aarch64' : 'yt-dlp_linux'
 }
 
+// Every yt-dlp and ffmpeg we start, so quitting the app stops them too.
+const activeChildren = new Set()
+
 /**
  * Stop a child and everything it started. On Windows yt-dlp.exe is a
  * launcher that runs the real yt-dlp as its own child process; killing only
- * the launcher (what child.kill() does) leaves that one downloading.
+ * the launcher (what child.kill() does) leaves that one downloading. On
+ * Linux and macOS the child is its own process group, so one signal also
+ * stops the ffmpeg merger it started.
  */
 function killTree(child, { sync = false } = {}) {
-  if (child.exitCode !== null || child.signalCode !== null) return
-  if (process.platform !== 'win32' || !child.pid) {
-    child.kill('SIGTERM')
+  if (!child || child.exitCode !== null || child.signalCode !== null) return
+  if (process.platform === 'win32') {
+    if (!child.pid) return
+    const taskkill = ['/pid', String(child.pid), '/T', '/F']
+    if (sync) spawnSync('taskkill', taskkill, { windowsHide: true })
+    else spawn('taskkill', taskkill, { windowsHide: true }).on('error', () => { try { child.kill() } catch { /* already gone */ } })
     return
   }
-  const taskkill = ['/pid', String(child.pid), '/T', '/F']
-  if (sync) spawnSync('taskkill', taskkill, { windowsHide: true })
-  else spawn('taskkill', taskkill, { windowsHide: true }).on('error', () => child.kill())
+  if (child.pid) {
+    try {
+      process.kill(-child.pid, 'SIGTERM')
+      return
+    } catch {
+      // Not a group leader (or already gone). Fall through to the child itself.
+    }
+  }
+  try { child.kill('SIGTERM') } catch { /* already gone */ }
 }
 
 /** spawn(), but aborting `signal` stops the whole process tree (killTree). */
 function spawnKillable(cmd, args, { signal, ...options } = {}) {
   signal?.throwIfAborted()
-  const child = spawn(cmd, args, { ...options, windowsHide: true })
+  const child = spawn(cmd, args, {
+    ...options,
+    windowsHide: true,
+    // A new process group so cancel reaches ffmpeg, not only yt-dlp.
+    detached: process.platform !== 'win32',
+  })
+  activeChildren.add(child)
+  child.once('close', () => activeChildren.delete(child))
   if (signal) {
     const onAbort = () => killTree(child)
     signal.addEventListener('abort', onAbort, { once: true })
@@ -82,15 +103,43 @@ function spawnKillable(cmd, args, { signal, ...options } = {}) {
   return child
 }
 
-/** Run a command, resolving { code, stdout, stderr } (never rejects on exit code). */
+/**
+ * Run a command, resolving { code, stdout, stderr } (never rejects on exit code).
+ * `timeout` (ms) stops the process tree and rejects; 0 means no limit.
+ */
 function run(cmd, args, { signal, timeout = 0 } = {}) {
   return new Promise((resolve, reject) => {
+    const killer = new AbortController()
+    const forward = () => killer.abort(signal.reason)
+    if (signal) {
+      if (signal.aborted) {
+        reject(signal.reason instanceof Error ? signal.reason : new YoinksError({ code: 'cancelled', message: 'Cancelled.' }))
+        return
+      }
+      signal.addEventListener('abort', forward, { once: true })
+    }
+    let settled = false
+    let timer
+    const settle = (fn, value) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', forward)
+      fn(value)
+    }
     let child
     try {
-      child = spawnKillable(cmd, args, { signal, timeout })
+      child = spawnKillable(cmd, args, { signal: killer.signal })
     } catch (err) {
-      reject(err)
+      settle(reject, err)
       return
+    }
+    if (timeout > 0) {
+      timer = setTimeout(() => {
+        const err = new YoinksError({ code: 'timeout', message: 'That took too long and was stopped.', retryable: true })
+        killer.abort(err)
+        killTree(child)
+      }, timeout)
     }
     let stdout = ''
     let stderr = ''
@@ -99,8 +148,13 @@ function run(cmd, args, { signal, timeout = 0 } = {}) {
     child.stderr.setEncoding('utf8')
     child.stdout.on('data', chunk => (stdout += chunk))
     child.stderr.on('data', chunk => (stderr += chunk))
-    child.on('error', reject)
-    child.on('close', code => (signal?.aborted ? reject(signal.reason) : resolve({ code, stdout, stderr })))
+    child.on('error', err => settle(reject, err))
+    child.on('close', code => {
+      if (killer.signal.aborted) {
+        const reason = killer.signal.reason
+        settle(reject, reason instanceof Error ? reason : new YoinksError({ code: 'cancelled', message: 'Cancelled.' }))
+      } else settle(resolve, { code, stdout, stderr })
+    })
   })
 }
 
@@ -546,7 +600,6 @@ const PROGRESS_PREFIX = 'YOINK|'
 const PROGRESS_TEMPLATE = `${PROGRESS_PREFIX}%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s`
 const PROCESSING_LINE = /^\[(Merger|ExtractAudio|EmbedThumbnail|EmbedSubtitle|Metadata|ThumbnailsConvertor|FixupM4a|FixupM3u8|MetadataParser|ModifyChapters|SplitChapters)\]/
 
-const activeChildren = new Set()
 process.on('exit', () => activeChildren.forEach(child => killTree(child, { sync: true })))
 
 /**
@@ -676,6 +729,7 @@ function toNumber(value) {
 }
 
 module.exports = {
+  run,
   listUploads,
   YoinksError,
   ensureYtDlp,

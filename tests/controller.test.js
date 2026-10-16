@@ -117,7 +117,7 @@ test('downloads wait outside the set times on the desktop app only', async () =>
   assert.equal(desktop.channels.length, 0, 'nothing starts')
   const job = desktop.controller.view().queue[0]
   assert.equal(job.phase, 'queued')
-  assert.match(job.waitNote, /Waiting for/)
+  assert.match(job.waitNote, /Waiting until/)
 
   const extension = makeController({ platform: 'extension', settings: closed })
   await extension.controller.ready
@@ -185,13 +185,30 @@ test('retryable failures are retried, then given up on', async () => {
   assert.equal(t.controller.view().queue.length, 0)
 })
 
+test('pause during lookup stops it, and resume looks the link up again', async () => {
+  const t = makeController()
+  await t.controller.ready
+  await t.controller.command({ type: 'batch', text: 'https://youtu.be/aaa' })
+  const id = t.controller.view().queue[0].id
+  assert.equal(t.controller.view().queue[0].phase, 'probing')
+  const channel = t.lastChannel()
+  await t.controller.command({ type: 'pause', id })
+  assert.equal(t.controller.view().queue[0].phase, 'paused')
+  assert.equal(channel.closed, true)
+  t.send(channel, { type: 'cancelled' })
+  assert.equal(t.controller.view().queue.length, 1, 'a late cancel does not remove a paused lookup')
+  await t.controller.command({ type: 'resume', id })
+  assert.equal(t.controller.view().queue[0].phase, 'probing')
+  assert.equal(t.channels.length, 2)
+})
+
 test('a preset picks the quality and carries its extras to the download', async () => {
-  const preset = { id: 'flac1', name: 'Music FLAC', format: 'audio', audioFormat: 'flac', embedSubs: false, embedThumbnail: true }
+  const preset = { id: 'flac1', name: 'Music FLAC', format: 'audio', audioFormat: 'flac', embedSubs: false, embedThumbnail: true, embedMetadata: false, splitChapters: true }
   const t = makeController({ settings: { presets: [preset] } })
   await t.controller.ready
   await t.controller.command({ type: 'batch', text: 'https://youtu.be/aaa', format: 'default', preset: 'flac1' })
   t.send(t.lastChannel(), MEDIA())
-  assert.deepEqual(t.lastChannel().posts.at(-1), { type: 'download', index: 2, clip: null, items: null, overrides: { audioFormat: 'flac', embedSubs: false, embedThumbnail: true } })
+  assert.deepEqual(t.lastChannel().posts.at(-1), { type: 'download', index: 2, clip: null, items: null, overrides: { audioFormat: 'flac', embedSubs: false, embedThumbnail: true, embedMetadata: false, splitChapters: true } })
   // an unknown preset id is ignored: the normal default is used
   await t.controller.command({ type: 'quick', url: 'https://youtu.be/bbb', format: 'best', preset: 'nope' })
   t.send(t.lastChannel(), MEDIA())

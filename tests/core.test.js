@@ -70,6 +70,16 @@ test('each quality shows the size of the file that is downloaded', () => {
 
 // ---------- session ----------
 
+test('a command that ignores its time limit is stopped, including processes it started', { timeout: 8_000 }, async () => {
+  const marker = path.join(os.tmpdir(), `yoinks-kill-${process.pid}-${Date.now()}`)
+  const grandchild = `setTimeout(() => require('fs').writeFileSync(${JSON.stringify(marker)}, 'x'), 2500)`
+  const parent = `require('child_process').spawn(process.execPath, ['-e', ${JSON.stringify(grandchild)}], {stdio:'ignore'}); setInterval(() => {}, 500)`
+  await assert.rejects(() => Ytdlp.run(process.execPath, ['-e', parent], { timeout: 400 }), err => err && err.code === 'timeout')
+  await new Promise(resolve => setTimeout(resolve, 800))
+  assert.equal(fs.existsSync(marker), false, 'the child process was stopped with the command')
+  fs.rmSync(marker, { force: true })
+})
+
 test('picked playlist items are cleaned up', () => {
   assert.deepEqual(validItems([3, 1, 1, 99, 'x', 0], 5), [1, 3])
   assert.equal(validItems([1, 2, 3], 3), null, 'everything picked means "all"')
@@ -79,7 +89,7 @@ test('picked playlist items are cleaned up', () => {
 })
 
 test('a preset can only change a few safe settings for one download', () => {
-  assert.deepEqual(validOverrides({ audioFormat: 'flac', embedSubs: true, embedThumbnail: false }), { audioFormat: 'flac', embedSubs: true, embedThumbnail: false })
+  assert.deepEqual(validOverrides({ audioFormat: 'flac', embedSubs: true, embedThumbnail: false, embedMetadata: false, splitChapters: true }), { audioFormat: 'flac', embedSubs: true, embedThumbnail: false, embedMetadata: false, splitChapters: true })
   assert.deepEqual(validOverrides({ audioFormat: 'exe', embedSubs: 'yes', outDir: 'C:\Windows', cookiesFromBrowser: 'chrome', ytdlpAutoUpdate: false }), {})
   assert.deepEqual(validOverrides(null), {})
   assert.deepEqual(validOverrides('x'), {})

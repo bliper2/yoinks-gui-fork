@@ -18,6 +18,7 @@ import com.yoinks.app.domain.model.Platform
 import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.domain.model.YoinksException
 import com.yoinks.app.domain.queue.QueueGate
+import com.yoinks.app.domain.queue.QueueRecords
 import com.yoinks.app.service.DownloadNotifications
 import com.yoinks.app.service.DownloadServiceLauncher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -113,6 +114,7 @@ class DownloadQueue @Inject constructor(
     fun retry(id: String) {
         if (find(id)?.phase != JobPhase.FAILED) return
         _jobs.update { list -> list.map { if (it.id == id) it.copy(phase = JobPhase.QUEUED, attempts = 0, error = null, status = null, retryAtMillis = 0) else it } }
+        persist()
         launcher.start()
         pump()
     }
@@ -239,6 +241,7 @@ class DownloadQueue @Inject constructor(
             update(job.id) { it.copy(phase = JobPhase.FAILED, attempts = attempts, error = error, status = null, progress = null) }
             if (settings.notifications) notifier.failed(job, error)
         }
+        persist()
     }
 
     // ---------- state helpers ----------
@@ -266,12 +269,38 @@ class DownloadQueue @Inject constructor(
     // nothing starts downloading by surprise. Partial files are kept.
 
     @Serializable
-    private data class Saved(val id: String, val request: DownloadRequest, val createdAt: Long)
+    private data class Saved(
+        val id: String,
+        val request: DownloadRequest,
+        val createdAt: Long,
+        val phase: String = QueueRecords.PAUSED,
+        val attempts: Int = 0,
+        val retryAtMillis: Long = 0,
+        val status: String? = null,
+        val errorCode: String? = null,
+        val errorMessage: String? = null,
+        val errorRetryable: Boolean = false,
+        val errorDetail: String = "",
+    )
 
     private val stateFile get() = File(context.filesDir, "queue.json")
 
     private fun persist() {
-        val saved = jobs.value.map { Saved(it.id, it.request, it.createdAt) }
+        val saved = jobs.value.map { job ->
+            Saved(
+                id = job.id,
+                request = job.request,
+                createdAt = job.createdAt,
+                phase = QueueRecords.storedPhase(job.phase, job.retryAtMillis),
+                attempts = job.attempts,
+                retryAtMillis = job.retryAtMillis,
+                status = job.status,
+                errorCode = job.error?.code,
+                errorMessage = job.error?.message,
+                errorRetryable = job.error?.retryable ?: false,
+                errorDetail = job.error?.detail.orEmpty(),
+            )
+        }
         runCatching { stateFile.writeText(json.encodeToString(ListSerializer(Saved.serializer()), saved)) }
     }
 
@@ -282,6 +311,24 @@ class DownloadQueue @Inject constructor(
         // Temp folders of jobs that no longer exist are leftovers: remove them.
         val keep = saved.map { it.id }.toSet()
         File(context.filesDir, "downloads").listFiles()?.filter { it.name !in keep }?.forEach { it.deleteRecursively() }
-        return saved.map { DownloadJob(it.id, it.request, Platform.detect(it.request.url), phase = JobPhase.PAUSED, status = "Paused (app was closed)", createdAt = it.createdAt) }
+        return saved.map { row ->
+            val phase = QueueRecords.restoredPhase(row.phase)
+            val error = row.errorCode?.let { YoinksError(it, row.errorMessage ?: "Download failed.", row.errorRetryable, row.errorDetail) }
+            DownloadJob(
+                id = row.id,
+                request = row.request,
+                platform = Platform.detect(row.request.url),
+                phase = phase,
+                status = when (phase) {
+                    JobPhase.FAILED -> null
+                    JobPhase.QUEUED -> row.status
+                    else -> "Paused (app was closed)"
+                },
+                attempts = row.attempts,
+                error = if (phase == JobPhase.PAUSED) null else error,
+                retryAtMillis = if (phase == JobPhase.QUEUED) row.retryAtMillis else 0,
+                createdAt = row.createdAt,
+            )
+        }
     }
 }

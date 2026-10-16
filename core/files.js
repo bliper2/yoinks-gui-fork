@@ -7,7 +7,7 @@
 // never launch a program. No cmd.exe anywhere: explorer.exe opens/selects
 // directly, and Windows paths cannot contain `"`.
 
-const { spawn } = require('node:child_process')
+const { spawn, spawnSync } = require('node:child_process')
 const fs = require('node:fs')
 const path = require('node:path')
 
@@ -33,13 +33,38 @@ function detached(cmd, args, options = {}) {
   spawn(cmd, args, { detached: true, stdio: 'ignore', ...options }).on('error', () => {}).unref()
 }
 
+function commandOnPath(cmd) {
+  return spawnSync('which', [cmd], { stdio: 'ignore' }).status === 0
+}
+
+/** Linux file managers that can highlight a file. xdg-open only opens the folder. */
+function revealLinux(target, isDir) {
+  if (isDir) {
+    detached('xdg-open', [target])
+    return
+  }
+  const desktop = `${process.env.XDG_CURRENT_DESKTOP || ''} ${process.env.DESKTOP_SESSION || ''}`.toLowerCase()
+  const kde = /kde|plasma/.test(desktop)
+  const managers = kde
+    ? [['dolphin', ['--select', target]], ['nautilus', ['--select', target]]]
+    : [['nautilus', ['--select', target]], ['dolphin', ['--select', target]]]
+  managers.push(['nemo', [target]], ['caja', [target]])
+  for (const [cmd, args] of managers) {
+    if (commandOnPath(cmd)) {
+      detached(cmd, args)
+      return
+    }
+  }
+  detached('xdg-open', [path.dirname(target)])
+}
+
 function reveal(raw) {
   const target = existingPath(raw)
   const isDir = fs.statSync(target).isDirectory()
   if (process.platform === 'win32') {
     detached('explorer.exe', [isDir ? `"${target}"` : `/select,"${target}"`], { windowsVerbatimArguments: true })
   } else if (process.platform === 'darwin') detached('open', isDir ? [target] : ['-R', target])
-  else detached('xdg-open', [isDir ? target : path.dirname(target)])
+  else revealLinux(target, isDir)
 }
 
 function open(raw) {
