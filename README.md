@@ -1,10 +1,11 @@
 # Yoinks
 
-Save videos and music to your PC from YouTube, YouTube Music, SoundCloud,
-Bandcamp, TikTok, Instagram, X, Vimeo, Twitch and 1,800+ other sites — plus
-Spotify links, which are matched on YouTube Music. Comes as a **desktop app**
-and a **browser extension** (Brave, Chrome, Edge) that share one engine, one
-settings file and one UI, plus a native **Android app** (`android/`).
+Save videos and music on Windows, Linux and Android from YouTube, YouTube Music,
+SoundCloud, Bandcamp, TikTok, Instagram, X, Vimeo, Twitch and 1,800+ other
+sites — plus Spotify links, which are matched on YouTube Music. Comes as a
+**desktop app** (Windows and Linux) and a **browser extension** (Brave, Chrome,
+Edge) that share one engine, one settings file and one UI, plus a native
+**Android app** (`android/`).
 
 Built on [yoinks](https://github.com/pablostanley/yoinks), with
 [yt-dlp](https://github.com/yt-dlp/yt-dlp) doing the downloading and
@@ -17,9 +18,20 @@ Built on [yoinks](https://github.com/pablostanley/yoinks), with
 
 <p align="center"><img src="docs/demo.gif" width="360" alt="Pasting a link, picking a quality, downloading, done"></p>
 
+## What's new in 2.5.0
+
+[Yoinks 2.5.0](https://github.com/bliper2/yoinks-gui-fork/releases/tag/v2.5.0)
+stops a stuck yt-dlp check from hanging the app, and on Linux cancelling or
+pausing a download also stops ffmpeg. Show in folder selects the file, long
+folder paths work, and pausing during a lookup really pauses. Presets remember
+tags and chapter splitting on Windows, Linux, the extension and Android.
+Android adds settings search, presets, clip sliders, photo posts, and a
+download window that says when it next opens. The full list is in
+[CHANGELOG.md](CHANGELOG.md).
+
 ## Downloads
 
-Everything is on the [Releases](../../releases) page:
+The current release is **2.5.0**. Everything is on the [Releases](../../releases) page:
 
 | File | What it is |
 |---|---|
@@ -35,7 +47,9 @@ Everything is on the [Releases](../../releases) page:
 
 The Windows builds are not code-signed yet, so SmartScreen may warn on first
 run (**More info**, then **Run anyway**). The Android APKs are sideloaded: see
-[android/README.md](android/README.md#install-on-a-phone). What changed in each
+[android/README.md](android/README.md#install-on-a-phone). When no release
+keystore is configured, those APKs are debug builds (`com.yoinks.app.debug`)
+and install beside a copy signed with a different key. What changed in each
 version is in [CHANGELOG.md](CHANGELOG.md), and the apps show it after an update.
 
 ## Screenshots
@@ -103,24 +117,29 @@ version is in [CHANGELOG.md](CHANGELOG.md), and the apps show it after an update
 
 ### Publishing a new version
 
-The version is the same everywhere. For `2.3.0`:
+The version is the same everywhere. The current release is **2.5.0**. For a
+version such as `2.5.0`:
 
-1. Set it in `package.json` (`npm pkg set version=2.3.0`), in
+1. Set it in `package.json` (`npm pkg set version=2.5.0`), in
    `extension/manifest.json`, and as `versionName` (and a bigger `versionCode`)
    in `android/app/build.gradle.kts`.
-2. Add a `## 2.3.0` section to [CHANGELOG.md](CHANGELOG.md) (short enough for one Discord
+2. Add a `## 2.5.0` section to [CHANGELOG.md](CHANGELOG.md) (short enough for one Discord
    message) and run `npm run sync` so the apps show it. `npm test` fails if the
    versions or the copies disagree.
-3. Tag and push: `git tag v2.3.0 && git push origin v2.3.0`. The **Release**
-   workflow builds the Windows installer, the portable exe and both extension
-   downloads, attaches them to a GitHub release, and posts the changelog to
-   Discord when the `DISCORD_WEBHOOK_URL` secret is set.
+3. Tag and push: `git tag v2.5.0 && git push origin v2.5.0`. The **Release**
+   workflow builds the Windows installer and portable exe, the Linux AppImage,
+   .deb and .rpm, and both extension downloads, attaches them to a GitHub
+   release named `Yoinks 2.5.0` (notes from that changelog section), and posts
+   the changelog to Discord when the `DISCORD_WEBHOOK_URL` secret is set.
 4. Android APKs: the workflow builds signed ones when the keystore secrets are
    set (see the comments in [.github/workflows/release.yml](.github/workflows/release.yml)).
-   Otherwise build them yourself (`gradlew assembleDebug` in `android/`), rename
-   them `Yoinks-android-2.3.0-arm64-v8a.apk`, `…-armeabi-v7a.apk` and
-   `…-universal.apk` (the Android updater looks for these names) and add them
-   to the release.
+   Otherwise it builds debug APKs and attaches them as
+   `Yoinks-android-2.5.0-arm64-v8a.apk`, `…-armeabi-v7a.apk` and
+   `…-universal.apk` (the Android updater looks for these names). Those debug
+   builds use the package `com.yoinks.app.debug` and a key created on the
+   build machine, so they install beside a release-signed copy and a later
+   GitHub build will not replace them. Set the keystore secrets for updates
+   that install over the previous one.
 
 Android installs an update only when it is signed with the same key as the
 installed app, so keep the signing key: debug builds use
@@ -129,7 +148,7 @@ key, see [android/README.md](android/README.md#signed-release-apk).
 
 ## Requirements (to run from source)
 
-- Windows 11 (10 works too)
+- Windows 11 (10 works too), or Linux (see [Linux](#linux))
 - [Node.js](https://nodejs.org) 18 or newer, on `PATH`
 
 ## Desktop app
@@ -262,7 +281,7 @@ player bar (quick download of whatever is playing, on any page), in Bandcamp's s
 - **Presets** — save a combination such as "Music FLAC" (quality, audio format,
   subtitles, cover art, tags, chapter splitting) and pick it with one click in the format list or in Batch.
   The format list can also remember a quality for each website. Android has the same presets.
-- **Convert files** (Windows app) — turn video or audio on your PC into MP3, M4A,
+- **Convert files** (Windows and Linux) — turn video or audio on your computer into MP3, M4A,
   FLAC, Opus or MP4: drop files on the window or use Batch.
 - **Yoink all videos on this page** (extension) — right-click a channel,
   playlist, search or profile page, pick which videos to queue in Batch.
@@ -272,7 +291,7 @@ player bar (quick download of whatever is playing, on any page), in Bandcamp's s
 - **Batch** — paste many links (or drop/open a `.txt` file) and queue them all.
 - **Queue** — pause, resume, retry, cancel; a set number of downloads at once;
   automatic retries for network errors; notifications when done or failed.
-  Optional download window ("only between 01:00 and 07:00") on Windows and Android;
+  Optional download window ("only between 01:00 and 07:00") on Windows, Linux and Android;
   Android can also wait on low battery or Data Saver.
 - **Windows extras** — asks before closing while downloads run, drop a link on
   the window, optionally offers links you copy.
@@ -366,7 +385,7 @@ changelog copies and the extension's script list agree everywhere.
 ## Support
 
 - **Discord:** [Yoink Community](https://discord.gg/knRghkqzct) for help, update announcements and ideas.
-- **Bugs and feature requests:** [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues/new/choose). Tell us the app (Windows, extension or Android), its version and the link that failed; **Copy details** on the error does that for you.
+- **Bugs and feature requests:** [GitHub issues](https://github.com/bliper2/yoinks-gui-fork/issues/new/choose). Tell us the app (Windows, Linux, extension or Android), its version and the link that failed; **Copy details** on the error does that for you.
 - **Common problems:** [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md).
 - **Security problems:** see [SECURITY.md](SECURITY.md); please report them privately.
 
