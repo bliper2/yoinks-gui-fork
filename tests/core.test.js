@@ -188,6 +188,13 @@ test('the right song ranks first', () => {
 
 // ---------- repository hygiene ----------
 
+test('the AppImage launcher does not pass --no-sandbox to the browser helper', () => {
+  const { linuxLauncher } = require('../build/after-pack.js')
+  const script = linuxLauncher('yoinks')
+  assert.match(script, /\[ -n "\$APPIMAGE" \] && \[ -z "\$ELECTRON_RUN_AS_NODE" \]/)
+  assert.match(script, /exec "\$HERE\/yoinks\.bin" "\$@"/)
+})
+
 test('the changelog copies the apps show are in sync', () => {
   const source = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf-8')
   for (const copy of ['extension/legal/changelog.md', 'android/app/src/main/res/raw/changelog.md']) {

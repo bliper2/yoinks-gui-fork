@@ -5,6 +5,7 @@
 - Fixed (Windows and Linux): a stuck yt-dlp check no longer hangs Yoinks. Version checks, health checks and updates stop if they take too long.
 - Fixed (Linux): cancelling or pausing a download also stops ffmpeg, so a merge does not keep running after you stop it.
 - Fixed (Linux): Show in folder selects the file when Files, Nautilus or Dolphin is installed. Long folder paths are accepted, and file name previews use the right slash.
+- Fixed (Linux): the AppImage browser helper starts. The launcher no longer passes --no-sandbox to the copy of the app that runs as Node.
 - Fixed: pausing a download while Yoinks is still looking the link up now pauses it. Resume looks it up again.
 - Fixed: a report copied from the Linux app says Linux app.
 - Presets can also remember tags and chapter splitting (Windows, Linux, the extension and Android). Presets you already saved keep working.
