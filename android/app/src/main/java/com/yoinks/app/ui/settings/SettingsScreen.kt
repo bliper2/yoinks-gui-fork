@@ -41,7 +41,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -73,6 +76,7 @@ import com.yoinks.app.domain.model.AudioBitrate
 import com.yoinks.app.domain.model.AudioFormat
 import com.yoinks.app.domain.health.HealthStatus
 import com.yoinks.app.domain.model.DefaultFormat
+import com.yoinks.app.domain.model.DownloadPreset
 import com.yoinks.app.domain.model.FolderBy
 import com.yoinks.app.domain.model.ShareBehavior
 import com.yoinks.app.domain.model.ThemeMode
@@ -173,11 +177,19 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
     var confirm by remember { mutableStateOf<String?>(null) }
     var picker by remember { mutableStateOf(false) }
     var timeDialog by remember { mutableStateOf<String?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
         Text("Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("Search settings") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
         Column(Modifier.widthIn(max = 840.dp)) {
-            SettingsGroup("Look") {
+            SettingsGroup("Look", query, "style theme floating navigation bar amoled accent material you color wallpaper") {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Style", style = MaterialTheme.typography.bodyLarge)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -221,7 +233,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 }
             }
 
-            SettingsGroup("Downloads") {
+            SettingsGroup("Downloads", query, "video folder music folder format file name template sort uploader website remembered quality preset") {
                 ActionRow("Video folder", s.videoFolderUri?.let(::folderName) ?: "Movies/Yoinks (default)", onClick = { callbacks.pickFolder(false) }) {
                     if (s.videoFolderUri != null) TextActionButton("Default", { callbacks.resetFolder(false) })
                 }
@@ -235,14 +247,15 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 s.siteFormats.forEach { (site, quality) ->
                     ActionRow("${site.replace('-', ' ').replaceFirstChar(Char::uppercase)}: ${if (quality == "audio") "audio only" else if (quality == "best") "best video" else "${quality}p"}", "Remembered quality. Tap to forget it.", onClick = { set { it.copy(siteFormats = it.siteFormats - site) } })
                 }
+                PresetEditor(s.presets, ui.errors["presets"]) { next -> set { it.copy(presets = next) } }
             }
 
-            SettingsGroup("Audio") {
+            SettingsGroup("Audio", query, "mp3 m4a flac opus bitrate") {
                 ChoiceRow("Audio format", AudioFormat.entries, s.audioFormat, { it.label }, { v -> set { it.copy(audioFormat = v) } })
                 ChoiceRow("Bitrate", AudioBitrate.entries, s.audioBitrate, { it.label }, { v -> set { it.copy(audioBitrate = v) } }, if (s.audioFormat == AudioFormat.FLAC) "FLAC is lossless" else null)
             }
 
-            SettingsGroup("Tags and extras") {
+            SettingsGroup("Tags and extras", query, "title artist album chapters cover art subtitles language split tiktok watermark") {
                 SwitchRow("Save title, artist, album and chapters", s.embedMetadata, { v -> set { it.copy(embedMetadata = v) } })
                 SwitchRow("Add cover art", s.embedThumbnail, { v -> set { it.copy(embedThumbnail = v) } })
                 SwitchRow("Add subtitles to videos", s.embedSubs, { v -> set { it.copy(embedSubs = v) } })
@@ -262,12 +275,12 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 SwitchRow("TikTok without watermark", s.tiktokNoWatermark, { v -> set { it.copy(tiktokNoWatermark = v) } }, "When TikTok offers a clean copy")
             }
 
-            SettingsGroup("Playlists") {
+            SettingsGroup("Playlists", query, "folder album number") {
                 SwitchRow("Own folder per playlist or album", s.playlistFolder, { v -> set { it.copy(playlistFolder = v) } })
                 SwitchRow("Number the files (001, 002, …)", s.playlistNumbered, { v -> set { it.copy(playlistNumbered = v) } })
             }
 
-            SettingsGroup("Queue") {
+            SettingsGroup("Queue", query, "downloads retry speed limit wifi data saver battery schedule time notifications") {
                 SliderRow("Downloads at the same time", s.concurrency, 1..5, { v -> set { it.copy(concurrency = v) } })
                 SliderRow("Retry failed downloads", s.retries, 0..10, { v -> set { it.copy(retries = v) } }, { if (it == 0) "Off" else "$it×" })
                 var speed by remember(s.speedLimitMbps) { mutableStateOf(if (s.speedLimitMbps == 0f) "" else s.speedLimitMbps.toString()) }
@@ -295,7 +308,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 ActionRow("Battery optimization", "Set Yoinks to Unrestricted so long downloads are not stopped", onClick = callbacks.openBattery)
             }
 
-            SettingsGroup("Sharing") {
+            SettingsGroup("Sharing", query, "share clipboard paste link") {
                 ShareBehavior.entries.forEach { behavior ->
                     Row(
                         Modifier.fillMaxWidth().selectable(s.shareBehavior == behavior, role = Role.RadioButton) { set { it.copy(shareBehavior = behavior) } }
@@ -315,7 +328,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 )
             }
 
-            SettingsGroup("yt-dlp") {
+            SettingsGroup("yt-dlp", query, "version update cookies browser login") {
                 ActionRow(
                     "Version",
                     when {
@@ -343,7 +356,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 )
             }
 
-            SettingsGroup("Health check") {
+            SettingsGroup("Health check", query, "ffmpeg storage connection working") {
                 ActionRow("Is everything working?", "Checks yt-dlp, ffmpeg, your folders, storage and connection", onClick = callbacks.runHealth) {
                     TextActionButton(if (ui.health.busy) "Checking…" else if (ui.health.items.isEmpty()) "Run" else "Run again", callbacks.runHealth, enabled = !ui.health.busy)
                 }
@@ -371,14 +384,18 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 if (ui.health.items.isNotEmpty()) ActionRow("Copy results", "To paste into Discord or a GitHub issue", onClick = callbacks.copyHealth)
             }
 
-            SettingsGroup("Your data") {
+            SettingsGroup("Your data", query, "export import json clear history reset defaults") {
                 ActionRow("Export settings", "Save them as a JSON file", onClick = callbacks.exportSettings)
                 ActionRow("Import settings", "Load a JSON export", onClick = callbacks.importSettings)
                 ActionRow("Clear history", "Your files are not deleted", onClick = { confirm = "history" })
                 ActionRow("Reset to defaults", onClick = { confirm = "reset" })
             }
 
-            SettingsGroup("About") {
+            if (query.isNotBlank() && !SETTINGS_SEARCH.any { settingsQueryMatches(query, it) }) {
+                Text("No settings match “$query”.", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            SettingsGroup("About", query, "version terms privacy license") {
                 ActionRow("About Yoinks", "Version, open-source licenses", onClick = { callbacks.openLegal(LegalPage.ABOUT) })
                 ActionRow("Terms of use", onClick = { callbacks.openLegal(LegalPage.TERMS) })
                 ActionRow("Privacy", onClick = { callbacks.openLegal(LegalPage.PRIVACY) })
@@ -406,7 +423,7 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
         AlertDialog(
             onDismissRequest = { confirm = null },
             title = { Text(if (what == "reset") "Reset all settings?" else "Clear history?") },
-            text = { Text(if (what == "reset") "Every setting goes back to its default." else "The list of downloads is cleared. Your files stay on the phone.") },
+            text = { Text(if (what == "reset") "Every setting goes back to its default. The folders you picked stay." else "The list of downloads is cleared. Your files stay on the phone.") },
             confirmButton = {
                 TextButton(onClick = {
                     if (what == "reset") callbacks.reset() else callbacks.clearHistory()
@@ -463,6 +480,107 @@ private fun Swatch(color: Color, label: String, selected: Boolean, onClick: () -
             if (selected) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White)
         }
         Text(label, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+private val SETTINGS_SEARCH = listOf(
+    "look style theme floating navigation bar amoled accent material you color wallpaper",
+    "downloads video folder music folder format file name template sort uploader website remembered quality preset",
+    "audio mp3 m4a flac opus bitrate",
+    "tags and extras title artist album chapters cover art subtitles language split tiktok watermark",
+    "playlists folder album number",
+    "queue downloads retry speed limit wifi data saver battery schedule time notifications",
+    "sharing share clipboard paste link",
+    "yt-dlp version update cookies browser login",
+    "health check ffmpeg storage connection working",
+    "your data export import json clear history reset defaults",
+    "about version terms privacy license",
+)
+
+@Composable
+private fun PresetEditor(presets: List<DownloadPreset>, error: String?, onChange: (List<DownloadPreset>) -> Unit) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var formatKey by rememberSaveable { mutableStateOf(DefaultFormat.BEST.key) }
+    var audio by rememberSaveable { mutableStateOf("") }
+    var subs by rememberSaveable { mutableStateOf(false) }
+    var cover by rememberSaveable { mutableStateOf(true) }
+    var tags by rememberSaveable { mutableStateOf(true) }
+    var chapters by rememberSaveable { mutableStateOf(false) }
+    var formatOpen by remember { mutableStateOf(false) }
+    var audioOpen by remember { mutableStateOf(false) }
+    val format = DefaultFormat.entries.firstOrNull { it.key == formatKey } ?: DefaultFormat.BEST
+    val audioLabel = AudioFormat.entries.firstOrNull { it.ext == audio }?.label ?: "My default"
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Presets", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            "Save a combination, then pick it with one tap on the format list.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (presets.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                presets.forEach { preset ->
+                    AssistChip(
+                        onClick = { onChange(presets.filterNot { it.id == preset.id }) },
+                        label = { Text("${preset.name} ×") },
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it.take(24) },
+            label = { Text("Name, e.g. Music FLAC") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Box {
+            TextButton(onClick = { formatOpen = true }) { Text("Quality: ${format.label}") }
+            DropdownMenu(expanded = formatOpen, onDismissRequest = { formatOpen = false }) {
+                DefaultFormat.entries.forEach { option ->
+                    DropdownMenuItem(text = { Text(option.label) }, onClick = { formatKey = option.key; formatOpen = false })
+                }
+            }
+        }
+        Box {
+            TextButton(onClick = { audioOpen = true }) { Text("Audio: $audioLabel") }
+            DropdownMenu(expanded = audioOpen, onDismissRequest = { audioOpen = false }) {
+                DropdownMenuItem(text = { Text("My default") }, onClick = { audio = ""; audioOpen = false })
+                AudioFormat.entries.forEach { option ->
+                    DropdownMenuItem(text = { Text(option.label) }, onClick = { audio = option.ext; audioOpen = false })
+                }
+            }
+        }
+        DraftSwitch("Subtitles", subs) { subs = it }
+        DraftSwitch("Cover art", cover) { cover = it }
+        DraftSwitch("Save title, artist and chapters", tags) { tags = it }
+        DraftSwitch("Split into one file per chapter", chapters) { chapters = it }
+        TextButton(
+            onClick = {
+                val preset = DownloadPreset(
+                    id = java.util.UUID.randomUUID().toString().replace("-", "").take(8),
+                    name = name.trim(),
+                    format = format.key,
+                    audioFormat = audio,
+                    embedSubs = subs,
+                    embedThumbnail = cover,
+                    embedMetadata = tags,
+                    splitChapters = chapters,
+                )
+                onChange(presets + preset)
+                name = ""
+            },
+            enabled = presets.size < 12 && name.isNotBlank(),
+        ) { Text("Save preset") }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+    }
+}
+
+@Composable
+private fun DraftSwitch(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

@@ -2,6 +2,7 @@ package com.yoinks.app.domain.settings
 
 import com.yoinks.app.domain.format.FilenameTemplate
 import com.yoinks.app.domain.model.AppSettings
+import com.yoinks.app.domain.model.DownloadPreset
 
 /** Result of validating a settings change: the safe value plus any problems. */
 data class Validated(val settings: AppSettings, val errors: Map<String, String>)
@@ -18,6 +19,9 @@ object SettingsValidator {
     private val SITE = Regex("^[a-z0-9-]{1,30}$")
     private val QUALITIES = setOf("best", "2160", "1440", "1080", "720", "480", "audio")
     private val VERSION = Regex("^[0-9A-Za-z.\\-]{0,20}$")
+    private val PRESET_ID = Regex("^[a-z0-9]{1,12}$")
+    private val AUDIO_EXTS = setOf("mp3", "m4a", "flac", "opus")
+    private const val MAX_PRESETS = 12
 
     fun validate(candidate: AppSettings, previous: AppSettings = AppSettings()): Validated {
         val errors = linkedMapOf<String, String>()
@@ -78,9 +82,26 @@ object SettingsValidator {
         }
         if (!VERSION.matches(s.lastSeenVersion)) s = s.copy(lastSeenVersion = "")
         if (s.termsAccepted < 0) s = s.copy(termsAccepted = 0)
+        val presets = cleanPresets(s.presets)
+        if (presets != s.presets) {
+            errors["presets"] = "A preset needs a short name and a known quality."
+            s = s.copy(presets = presets)
+        }
         return Validated(s, errors)
     }
 
     /** Repair whatever was stored (never throws). */
     fun sanitize(stored: AppSettings): AppSettings = validate(stored, AppSettings()).settings
+
+    private fun cleanPresets(raw: List<DownloadPreset>): List<DownloadPreset> =
+        raw.mapNotNull { preset ->
+            val name = preset.name.trim()
+            val audio = preset.audioFormat.trim()
+            val ok = PRESET_ID.matches(preset.id) &&
+                name.length in 1..24 &&
+                name.none { it.code < 32 } &&
+                preset.format in QUALITIES &&
+                (audio.isEmpty() || audio in AUDIO_EXTS)
+            if (!ok) null else preset.copy(name = name, audioFormat = audio)
+        }.take(MAX_PRESETS)
 }

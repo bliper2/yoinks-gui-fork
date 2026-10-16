@@ -25,5 +25,15 @@
     return from < to ? t >= from && t < to : t >= from || t < to
   }
 
-  return { isOpen, minutesOf }
+  /** Status line while the window is closed. Says "tomorrow" when today's window has already ended. */
+  function waitLabel(settings, now = new Date()) {
+    const from = settings.scheduleFrom
+    const fromMin = minutesOf(from)
+    const toMin = minutesOf(settings.scheduleTo)
+    const t = now.getHours() * 60 + now.getMinutes()
+    const tomorrow = fromMin != null && toMin != null && fromMin < toMin && t >= toMin
+    return tomorrow ? `Waiting until ${from} tomorrow` : `Waiting until ${from}`
+  }
+
+  return { isOpen, minutesOf, waitLabel }
 })

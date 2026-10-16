@@ -62,7 +62,13 @@ class SettingsRepository @Inject constructor(
 
     /** Back to defaults, keeping the terms acceptance and chosen folders' access. */
     suspend fun reset() {
-        store.updateData { AppSettings(termsAccepted = it.termsAccepted) }
+        store.updateData {
+            AppSettings(
+                termsAccepted = it.termsAccepted,
+                videoFolderUri = it.videoFolderUri,
+                audioFolderUri = it.audioFolderUri,
+            )
+        }
     }
 
     fun export(settings: AppSettings): String =

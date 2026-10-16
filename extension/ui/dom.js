@@ -124,8 +124,18 @@
   }
 
   function shortenPath(p) {
-    const parts = String(p || '').split(/[\\/]/).filter(Boolean)
-    return parts.length > 2 ? `…\\${parts.slice(-2).join('\\')}` : p || 'Downloads'
+    const text = String(p || '')
+    const sep = text.includes('/') && !text.includes('\\') ? '/' : '\\'
+    const parts = text.split(/[\\/]/).filter(Boolean)
+    return parts.length > 2 ? `…${sep}${parts.slice(-2).join(sep)}` : text || 'Downloads'
+  }
+
+  /** "Windows app", "Linux app" or "browser extension" for support reports. */
+  function placeLabel(bridge) {
+    if (!bridge || bridge.platform !== 'desktop') return 'browser extension'
+    if (bridge.os === 'linux') return 'Linux app'
+    if (bridge.os === 'darwin') return 'Mac app'
+    return 'Windows app'
   }
 
   function filenameOf(p) {
@@ -175,7 +185,7 @@
    * no file names, no cookies.
    */
   function debugReport({ bridge, view, job }) {
-    const where = bridge.platform === 'desktop' ? 'Windows app' : 'browser extension'
+    const where = placeLabel(bridge)
     return [
       `Yoinks ${bridge.version ?? '?'} (${where})`,
       `yt-dlp: ${view?.ytdlp?.version ?? 'unknown'}`,
@@ -187,5 +197,5 @@
       .join('\n')
   }
 
-  root.YoinksDom = { h, icon, button, formatDuration, formatBytes, shortenPath, filenameOf, parseTime, timeAgo, copyText, debugReport }
+  root.YoinksDom = { h, icon, button, formatDuration, formatBytes, shortenPath, placeLabel, filenameOf, parseTime, timeAgo, copyText, debugReport }
 })(typeof self !== 'undefined' ? self : this)

@@ -40,7 +40,7 @@ test('remembered qualities accept only known sites and formats', () => {
 })
 
 test('presets are checked strictly', () => {
-  const good = { id: 'abc123', name: 'Music FLAC', format: 'audio', audioFormat: 'flac', embedSubs: false, embedThumbnail: true }
+  const good = { id: 'abc123', name: 'Music FLAC', format: 'audio', audioFormat: 'flac', embedSubs: false, embedThumbnail: true, embedMetadata: true, splitChapters: false }
   const { settings, errors } = Schema.validate({ presets: [{ ...good, name: '  Music FLAC  ', evil: 1 }] })
   assert.deepEqual(errors, {})
   assert.deepEqual(settings.presets, [good], 'trimmed, unknown fields dropped')
@@ -52,6 +52,16 @@ test('presets are checked strictly', () => {
   const a = Schema.defaults()
   a.presets.push(good)
   assert.deepEqual(Schema.defaults().presets, [], 'defaults are not shared')
+  const legacy = { id: 'abc123', name: 'Old', format: '720', audioFormat: '', embedSubs: false, embedThumbnail: true }
+  assert.deepEqual(Schema.validate({ presets: [legacy] }).settings.presets, [{ ...legacy, embedMetadata: true, splitChapters: false }])
+  assert.ok(Schema.validate({ presets: [{ ...good, embedMetadata: 'no' }] }).errors.presets)
+})
+
+test('a deep download folder path is accepted', () => {
+  const dir = `/${'music/'.repeat(80)}yoinks`
+  assert.ok(dir.length > 260)
+  assert.equal(Schema.validate({ outDir: dir }).errors.outDir, undefined)
+  assert.equal(Schema.validate({ outDir: dir }).settings.outDir, dir)
 })
 
 test('unknown keys are ignored, not stored', () => {
@@ -82,7 +92,8 @@ test('yt-dlp templates: numbering, playlist folder and folder-by', () => {
 
 test('the file name preview shows the folders', () => {
   assert.equal(Template.preview('{artist} - {title}', { ext: 'mp3' }).name, 'Rick Astley - Never Gonna Give You Up.mp3')
-  assert.equal(Template.preview('{title}', { ext: 'mp3', folderBy: 'uploader' }).name, 'Rick Astley\\Never Gonna Give You Up.mp3')
+  const sep = process.platform === 'win32' ? '\\' : '/'
+  assert.equal(Template.preview('{title}', { ext: 'mp3', folderBy: 'uploader' }).name, `Rick Astley${sep}Never Gonna Give You Up.mp3`)
 })
 
 // ---------- format picking ----------
@@ -191,6 +202,9 @@ test('the download window, including one that crosses midnight', () => {
   assert.equal(Schedule.isOpen(night, at(3)), true)
   assert.equal(Schedule.isOpen(night, at(12)), false)
   assert.equal(Schedule.isOpen({ scheduleOn: true, scheduleFrom: '08:00', scheduleTo: '08:00' }, at(3)), true, 'same time means always')
+  assert.equal(Schedule.waitLabel(day, at(12)), 'Waiting until 01:00 tomorrow')
+  assert.equal(Schedule.waitLabel(day, at(0, 30)), 'Waiting until 01:00')
+  assert.equal(Schedule.waitLabel(night, at(12)), 'Waiting until 22:00')
 })
 
 test('watched channels are validated', () => {

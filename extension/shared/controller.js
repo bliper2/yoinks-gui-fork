@@ -183,6 +183,7 @@
       job.channel = null
       job.probed = false
       if (job.phase === 'cancelling') return removeJob(job)
+      if (job.phase === 'paused') return
       if (['probing', 'downloading'].includes(job.phase)) {
         // A missing helper won't appear by retrying; a crash might be a one-off.
         fail(job, { code: 'host', message: reason || 'The Yoinks helper stopped unexpectedly.', retryable: !/not installed/i.test(reason ?? '') })
@@ -219,7 +220,7 @@
         .sort((a, b) => a.createdAt - b.createdAt)
       for (const job of waiting) {
         if (closed) {
-          job.waitNote = `Waiting for ${settings.scheduleFrom}`
+          job.waitNote = Schedule.waitLabel(settings)
           continue
         }
         if (activeCount() >= settings.concurrency) break
@@ -269,6 +270,8 @@
 
     function onMessage(job, message) {
       if (!jobs.has(job.id)) return
+      // A lookup paused by closing its session can still answer afterwards.
+      if (job.phase === 'paused' && message.type !== 'paused') return
       switch (message.type) {
         case 'status':
           job.status = message.message
@@ -583,6 +586,15 @@
         case 'pause':
           if (job?.phase === 'downloading') job.channel?.post({ type: 'pause' })
           else if (job?.phase === 'queued') job.phase = 'paused'
+          else if (job?.phase === 'probing') {
+            // The lookup has not started a file yet. Stop it and keep the job
+            // so Resume looks the link up again.
+            job.phase = 'paused'
+            job.probed = false
+            const channel = job.channel
+            job.channel = null
+            channel?.close()
+          }
           break
         case 'resume':
           if (job?.phase !== 'paused') return
@@ -764,14 +776,24 @@
 
     // What a preset changes for one download (an empty audio format keeps your default).
     function presetOverrides(preset) {
-      return overridesOf({ audioFormat: preset.audioFormat, embedSubs: preset.embedSubs, embedThumbnail: preset.embedThumbnail })
+      return overridesOf({
+        audioFormat: preset.audioFormat,
+        embedSubs: preset.embedSubs,
+        embedThumbnail: preset.embedThumbnail,
+        // Older presets did not store these; keep the same defaults they had.
+        embedMetadata: typeof preset.embedMetadata === 'boolean' ? preset.embedMetadata : true,
+        splitChapters: typeof preset.splitChapters === 'boolean' ? preset.splitChapters : false,
+      })
     }
 
     function overridesOf(raw) {
       const out = {}
+      if (!raw || typeof raw !== 'object') return out
       if (Schema.AUDIO_FORMATS.some(([key]) => key === raw.audioFormat)) out.audioFormat = raw.audioFormat
       if (typeof raw.embedSubs === 'boolean') out.embedSubs = raw.embedSubs
       if (typeof raw.embedThumbnail === 'boolean') out.embedThumbnail = raw.embedThumbnail
+      if (typeof raw.embedMetadata === 'boolean') out.embedMetadata = raw.embedMetadata
+      if (typeof raw.splitChapters === 'boolean') out.splitChapters = raw.splitChapters
       return out
     }
 

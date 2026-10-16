@@ -257,6 +257,12 @@
         }
         let clip = null
         if (clipOn.checked) {
+          if (!start.value.trim() && !end.value.trim()) {
+            problem.textContent = 'Set a start or an end, or turn the clip off.'
+            problem.hidden = false
+            options.open = true
+            return
+          }
           const s = parseTime(start.value) ?? 0
           const e = parseTime(end.value)
           const message = Number.isNaN(s) || Number.isNaN(e) ? 'Write times like 1:05 or 65.' : e !== null && e <= s ? 'The clip has to end after it starts.' : ''
@@ -297,11 +303,17 @@
         h('button', {
           type: 'button',
           class: 'chip chip-btn',
-          title: `${preset.format === 'audio' ? 'Audio' : preset.format === 'best' ? 'Best video' : `${preset.format}p`}${preset.audioFormat ? `, ${preset.audioFormat.toUpperCase()}` : ''}${preset.embedSubs ? ', subtitles' : ''}${preset.embedThumbnail ? ', cover art' : ''}`,
+          title: `${preset.format === 'audio' ? 'Audio' : preset.format === 'best' ? 'Best video' : `${preset.format}p`}${preset.audioFormat ? `, ${preset.audioFormat.toUpperCase()}` : ''}${preset.embedSubs ? ', subtitles' : ''}${preset.embedThumbnail ? ', cover art' : ''}${preset.embedMetadata === false ? ', no tags' : ''}${preset.splitChapters ? ', split chapters' : ''}`,
           text: preset.name,
           onclick: () => {
             const index = root.YoinksFormats.pickChoice(job.choices, preset.format)
-            pick(index < 0 ? job.defaultIndex : index, { audioFormat: preset.audioFormat, embedSubs: preset.embedSubs, embedThumbnail: preset.embedThumbnail })
+            pick(index < 0 ? job.defaultIndex : index, {
+              audioFormat: preset.audioFormat,
+              embedSubs: preset.embedSubs,
+              embedThumbnail: preset.embedThumbnail,
+              embedMetadata: typeof preset.embedMetadata === 'boolean' ? preset.embedMetadata : true,
+              splitChapters: preset.splitChapters === true,
+            })
           },
         }),
       )

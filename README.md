@@ -260,8 +260,8 @@ player bar (quick download of whatever is playing, on any page), in Bandcamp's s
 - **Search** — type words instead of a link and pick from the YouTube results.
 - **Playlists** — tick the videos you want before downloading.
 - **Presets** — save a combination such as "Music FLAC" (quality, audio format,
-  subtitles, cover art) and pick it with one click in the format list or in Batch.
-  The format list can also remember a quality for each website.
+  subtitles, cover art, tags, chapter splitting) and pick it with one click in the format list or in Batch.
+  The format list can also remember a quality for each website. Android has the same presets.
 - **Convert files** (Windows app) — turn video or audio on your PC into MP3, M4A,
   FLAC, Opus or MP4: drop files on the window or use Batch.
 - **Yoink all videos on this page** (extension) — right-click a channel,
@@ -277,7 +277,8 @@ player bar (quick download of whatever is playing, on any page), in Bandcamp's s
 - **Windows extras** — asks before closing while downloads run, drop a link on
   the window, optionally offers links you copy.
 - **Android extras** — "Yoink copied link" Quick Settings tile and "Paste link"
-  app shortcut, pictures and a Share button in the finished notification.
+  app shortcut, pictures and a Share button in the finished notification, a settings search,
+  and clip sliders when the video length is known.
 - **Clear errors** — "This video is age-restricted…" instead of raw yt-dlp output.
 - **Looks** — four styles (Clean, Playful, Neon, Classic), Light, Dark or
   System, five accent presets and a custom color, and the navigation buttons

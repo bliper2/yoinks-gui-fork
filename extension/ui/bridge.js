@@ -74,6 +74,7 @@
       extensionInfo: api.extensionInfo,
       openPath: api.openPath,
       version: api.version,
+      os: api.os,
     }
   }
 

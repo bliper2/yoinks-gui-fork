@@ -29,7 +29,8 @@ object InfoParser {
         val isPlaylist = info.string("_type") == "playlist"
         val formats = if (isPlaylist) playlistChoices(settings) else choices(info, settings)
         val videoCount = formats.count { it.kind == MediaKind.VIDEO }
-        val defaultFormat = if (platform.isMusic) "audio" else settings.defaultFormat.key
+        val remembered = settings.siteFormats[platform.key]
+        val defaultFormat = remembered ?: if (platform.isMusic) "audio" else settings.defaultFormat.key
         return MediaInfo(
             url = url,
             platform = platform,
