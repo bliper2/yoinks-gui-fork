@@ -22,7 +22,8 @@ Built on [yoinks](https://github.com/pablostanley/yoinks), with
 
 [Yoinks 2.5.0](https://github.com/bliper2/yoinks-gui-fork/releases/tag/v2.5.0)
 stops a stuck yt-dlp check from hanging the app, and on Linux cancelling or
-pausing a download also stops ffmpeg. Show in folder selects the file, long
+pausing a download also stops ffmpeg. The AppImage browser helper starts.
+Show in folder selects the file, long
 folder paths work, and pausing during a lookup really pauses. Presets remember
 tags and chapter splitting on Windows, Linux, the extension and Android.
 Android adds settings search, presets, clip sliders, photo posts, and a
