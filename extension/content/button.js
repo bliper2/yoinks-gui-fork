@@ -246,6 +246,11 @@
     function quick(format, clip = null) {
       closeMenu()
       if (send({ type: 'page:quick', url: getUrl(), format, clip })) setState({ phase: 'loading' })
+      // A job update normally replaces this state within a moment. If none
+      // comes (the link was rejected, the worker was asleep), do not leave the
+      // button stuck and disabled.
+      clearTimeout(resetTimer)
+      resetTimer = setTimeout(() => state.phase === 'loading' && setState({ phase: 'idle' }), 8000)
     }
 
     function choose(playlist = false) {

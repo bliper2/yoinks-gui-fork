@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.1
+
+- Fixed (extension): the Yoink button on a page no longer stays stuck on "Adding…" when the link was not accepted.
+- Fixed (extension): clip times sent from a page are checked before they are used.
+- Extension: right-click "Yoink this page as audio".
+- Extension: the toolbar button's tooltip says how many downloads are running, waiting or failed.
+
+
 ## 2.5.0
 
 - Fixed (Windows and Linux): a stuck yt-dlp check no longer hangs Yoinks. Version checks, health checks and updates stop if they take too long.

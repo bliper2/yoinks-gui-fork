@@ -87,6 +87,7 @@ const notificationTargets = new Map()
 function onNotification(id) {
   chrome.notifications.clear(id)
   const target = notificationTargets.get(id) ?? controller.historyEntry(id)?.filepath
+  notificationTargets.delete(id)
   if (target) controller.command({ type: 'file:reveal', filepath: target })
   else openPopup()
 }
@@ -112,7 +113,19 @@ function updateBadge(view) {
   else if (view.queue.some(job => job.phase === 'failed' || job.phase === 'review')) text = '!'
   else if (view.lookup?.phase === 'probing' || view.queue.some(job => job.phase === 'probing')) text = '…'
   chrome.action.setBadgeText({ text })
+  chrome.action.setTitle({ title: badgeTitle(view, active) })
   chrome.action.setBadgeBackgroundColor({ color: text === '!' ? '#e5484d' : '#7c5cff' })
+}
+
+// The tooltip of the toolbar button says what the badge means.
+function badgeTitle(view, active) {
+  const failed = view.queue.filter(job => job.phase === 'failed').length
+  const waiting = view.queue.filter(job => job.phase === 'queued' || job.phase === 'probing').length
+  const bits = []
+  if (active.length) bits.push(`${active.length} downloading`)
+  if (waiting) bits.push(`${waiting} waiting`)
+  if (failed) bits.push(`${failed} failed`)
+  return bits.length ? `Yoinks: ${bits.join(', ')}` : 'Yoinks (Alt+Y)'
 }
 
 function percentOf(job) {
@@ -167,7 +180,10 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (sender.id !== chrome.runtime.id || !sender.tab) return
   const source = { tabId: sender.tab.id }
   if (message?.type === 'page:quick') {
-    controller.command({ type: 'quick', url: message.url, format: message.format, clip: message.clip ?? null, source })
+    const { start, end } = message.clip ?? {}
+    const clip = message.format === 'clip' && Number.isFinite(start) && start >= 0 && (end === null || (Number.isFinite(end) && end > start)) ? { start, end } : null
+    if (message.format === 'clip' && !clip) return
+    controller.command({ type: 'quick', url: message.url, format: message.format, clip, source })
   } else if (message?.type === 'page:choose') {
     controller.command({ type: 'lookup', url: message.url, playlist: message.playlist === true, source }).then(openPopup)
   } else if (message?.type === 'page:state') {
@@ -185,6 +201,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
     chrome.contextMenus.create({ id: 'yoink-link', title: 'Yoink link…', contexts: ['link'] })
     chrome.contextMenus.create({ id: 'yoink-link-audio', title: 'Yoink link as audio', contexts: ['link'] })
     chrome.contextMenus.create({ id: 'yoink-page', title: 'Yoink this page…', contexts: ['page', 'video', 'audio'] })
+    chrome.contextMenus.create({ id: 'yoink-page-audio', title: 'Yoink this page as audio', contexts: ['page', 'video', 'audio'] })
     chrome.contextMenus.create({ id: 'yoink-bulk', title: 'Yoink all videos on this page…', contexts: ['page'] })
   })
   // First run: show the terms (and settings) once.
@@ -210,9 +227,9 @@ async function yoinkAllOnPage(tab) {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'yoink-bulk') return tab && yoinkAllOnPage(tab)
-  const url = info.menuItemId === 'yoink-page' ? info.pageUrl : info.linkUrl
+  const url = info.menuItemId.startsWith('yoink-page') ? info.pageUrl : info.linkUrl
   if (!/^https?:/.test(url ?? '')) return
   const source = tab?.id >= 0 ? { tabId: tab.id } : null
-  if (info.menuItemId === 'yoink-link-audio') controller.command({ type: 'quick', url, format: 'audio', source: null })
+  if (info.menuItemId === 'yoink-link-audio' || info.menuItemId === 'yoink-page-audio') controller.command({ type: 'quick', url, format: 'audio', source: null })
   else controller.command({ type: 'lookup', url, source }).then(openPopup)
 })
