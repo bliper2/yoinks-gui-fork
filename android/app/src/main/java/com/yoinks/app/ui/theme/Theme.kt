@@ -88,7 +88,12 @@ private fun typographyFor(style: UiStyle): Typography {
             titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = base.titleLarge.letterSpacing * 1.5f),
             labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         )
-        UiStyle.CLEAN -> base.copy(titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold))
+        UiStyle.CLEAN -> base.copy(
+            headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+            titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+            titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        )
         UiStyle.CLASSIC -> base
     }
 }

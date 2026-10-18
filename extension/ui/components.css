@@ -564,3 +564,21 @@ kbd {
 .banner-info span {
   flex: 1;
 }
+
+/* ---------- finishing touches ---------- */
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 25%, transparent) transparent;
+}
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}

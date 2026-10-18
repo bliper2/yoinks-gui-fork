@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.5.2
+
+- Android: the Clean style uses slightly bolder headings and buttons, so titles and actions stand out more.
+- Extension: text selection uses your accent color, scrollbars are slimmer, and buttons brighten a little when you point at them.
+
+
 ## 2.5.1
 
 - Fixed (extension): the Yoink button on a page no longer stays stuck on "Adding…" when the link was not accepted.
