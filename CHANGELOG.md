@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.0
+
+- The Clean style is darker and flatter. Dark mode now sits close to true black on Windows, in the extension and on Android, and the toolbar header no longer blurs what is behind it.
+- Section titles in the queue and recent list are plain sentence case in the normal text color instead of small tracked capitals. File sizes and counts use the regular font with aligned digits.
+
+
 ## 2.5.2
 
 - Android: the Clean style uses slightly bolder headings and buttons, so titles and actions stand out more.

@@ -292,13 +292,13 @@ body {
   font-weight: 600;
 }
 .choice-ext {
-  font: 10.5px var(--font-mono);
+  font: 600 11px var(--font-ui);
   color: var(--text-faint);
-  text-transform: uppercase;
 }
 .choice-size {
   margin-left: auto;
-  font: 11px var(--font-mono);
+  font: 11.5px var(--font-ui);
+  font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 .choice.is-audio .choice-label,
@@ -449,17 +449,14 @@ body {
   justify-content: space-between;
   min-height: 28px;
   margin-bottom: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
 }
 .list-section h2 .count {
   color: var(--text-faint);
-  letter-spacing: 0;
-  text-transform: none;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 .list-section h2 .btn-link {
   font-size: 12px;
