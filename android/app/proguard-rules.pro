@@ -25,3 +25,11 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# The release APK once failed to start downloads with an error that was just an
+# obfuscated class name ("qh0"): a library looks up its own classes by name,
+# and R8 had renamed them. The libraries youtubedl-android unpacks its runtime
+# with are kept as they are, and nothing is renamed.
+-keep class org.apache.commons.** { *; }
+-keep class org.tukaani.** { *; }
+-dontobfuscate

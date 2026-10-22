@@ -46,8 +46,15 @@
   <main>
     <h1>Changelog</h1>
     <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v2.6.2">
+      <h2>2.6.2 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>Fixed (Android): downloads failed with an error like &quot;unknown - qh0&quot; in the signed release app. The app's code shrinker had renamed classes that a library looks up by name. Names are no longer changed, so the engine starts and TikTok and other links download again.</li>
+        <li>Android: an unknown error now includes the name of the error class in &quot;Copy details&quot;, so a report says what actually broke.</li>
+      </ul>
+    </section>
     <section class="release" id="v2.6.1">
-      <h2>2.6.1 <span class="latest">Latest</span></h2>
+      <h2>2.6.1</h2>
       <ul>
         <li>Fixed (Android): updating from inside the app failed with a package error. Releases were signed with a different temporary key each time, so Android refused to install one over the other. Releases are now signed with one permanent key.</li>
         <li>Android: this release installs as the normal Yoinks app (com.yoinks.app), not the debug build. Install it once by hand, and every update after that installs over it. You can then uninstall the old debug copy.</li>

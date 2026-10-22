@@ -58,7 +58,8 @@ object ErrorTranslator {
         is UnknownHostException, is SocketTimeoutException ->
             YoinksError("network", "No internet connection, or the connection dropped. Check your network and try again.", true, error.message.orEmpty())
         is IOException -> translate(error.message ?: "network error", platform).let { if (it.code == "unknown") it.copy(code = "network", retryable = true) else it }
-        else -> translate(error.message, platform)
+        // An unknown failure also names its class, so a report says what broke even when the message is empty or cryptic.
+        else -> translate(error.message, platform).let { if (it.code == "unknown") it.copy(detail = "${error.javaClass.name}: ${it.detail}") else it }
     }
 
     // Public posts and reels work without an account; this one is not public.
