@@ -102,9 +102,9 @@ private fun typographyFor(style: UiStyle): Typography {
 private fun ColorScheme.styled(style: UiStyle, dark: Boolean): ColorScheme = when (style) {
     // Neutral greys instead of blue-tinted ones.
     UiStyle.CLEAN -> if (dark) copy(
-        background = Color(0xFF0E1015), surface = Color(0xFF0E1015),
-        surfaceContainerLow = Color(0xFF14161C), surfaceContainer = Color(0xFF181B21),
-        surfaceContainerHigh = Color(0xFF1E2128), surfaceContainerHighest = Color(0xFF252932),
+        background = Color(0xFF08090C), surface = Color(0xFF08090C),
+        surfaceContainerLow = Color(0xFF0C0E12), surfaceContainer = Color(0xFF111318),
+        surfaceContainerHigh = Color(0xFF171A20), surfaceContainerHighest = Color(0xFF1E222A),
     ) else copy(
         background = Color(0xFFF5F6F8), surface = Color(0xFFF5F6F8),
         surfaceContainerLow = Color(0xFFFFFFFF), surfaceContainer = Color(0xFFEFF1F4),

@@ -124,12 +124,14 @@
   --head-weight: 650;
 }
 :root[data-style='clean'][data-theme='dark'] {
-  --bg: #0e1015;
-  --surface: #161920;
-  --surface-2: #1d212a;
-  --surface-solid: #161920;
-  --border: rgba(255, 255, 255, 0.075);
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --bg: #08090c;
+  --surface: #111318;
+  --surface-2: #181b22;
+  --surface-solid: #111318;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text-muted: #a3acbd;
+  --card-shadow: none;
 }
 :root[data-style='clean'][data-theme='light'] {
   --bg: #f5f6f8;
@@ -194,3 +196,13 @@
 }
 
 /* Classic: the original glassy look (uses the defaults above). */
+
+/* Flat surfaces, no glass, numbers that line up: the Clean style and the
+   rest of the app read the same way on every screen. */
+:root[data-style='clean'] .app-header {
+  background: var(--bg);
+  backdrop-filter: none;
+}
+body {
+  font-variant-numeric: tabular-nums;
+}
