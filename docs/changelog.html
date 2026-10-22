@@ -46,8 +46,15 @@
   <main>
     <h1>Changelog</h1>
     <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v2.6.1">
+      <h2>2.6.1 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>Fixed (Android): updating from inside the app failed with a package error. Releases were signed with a different temporary key each time, so Android refused to install one over the other. Releases are now signed with one permanent key.</li>
+        <li>Android: this release installs as the normal Yoinks app (com.yoinks.app), not the debug build. Install it once by hand, and every update after that installs over it. You can then uninstall the old debug copy.</li>
+      </ul>
+    </section>
     <section class="release" id="v2.6.0">
-      <h2>2.6.0 <span class="latest">Latest</span></h2>
+      <h2>2.6.0</h2>
       <ul>
         <li>The Clean style is darker and flatter. Dark mode now sits close to true black on Windows, in the extension and on Android, and the toolbar header no longer blurs what is behind it.</li>
         <li>Section titles in the queue and recent list are plain sentence case in the normal text color instead of small tracked capitals. File sizes and counts use the regular font with aligned digits.</li>

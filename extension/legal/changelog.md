@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.1
+
+- Fixed (Android): updating from inside the app failed with a package error. Releases were signed with a different temporary key each time, so Android refused to install one over the other. Releases are now signed with one permanent key.
+- Android: this release installs as the normal Yoinks app (com.yoinks.app), not the debug build. Install it once by hand, and every update after that installs over it. You can then uninstall the old debug copy.
+
+
 ## 2.6.0
 
 - The Clean style is darker and flatter. Dark mode now sits close to true black on Windows, in the extension and on Android, and the toolbar header no longer blurs what is behind it.
