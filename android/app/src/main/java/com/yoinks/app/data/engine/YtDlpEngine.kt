@@ -27,6 +27,7 @@ import com.yoinks.app.domain.model.YoinksError
 import com.yoinks.app.domain.model.YoinksException
 import com.yoinks.app.domain.errors.ErrorTranslator.snapchatPrivate
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -62,8 +63,11 @@ class YtDlpEngine @Inject constructor(
                 try {
                     YoutubeDL.getInstance().init(context)
                     FFmpeg.getInstance().init(context)
-                } catch (e: YoutubeDLException) {
-                    throw YoinksException(YoinksError("engine", "The download engine could not start. Reinstall Yoinks if this keeps happening.", false, e.message.orEmpty()), e)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Not only YoutubeDLException: a class or file problem inside the engine must also say what it was.
+                    throw YoinksException(YoinksError("engine", "The download engine could not start. Reinstall Yoinks if this keeps happening.", false, "${e.javaClass.name}: ${e.message.orEmpty()}"), e)
                 }
                 ytdlpVersion = YoutubeDL.getInstance().version(context)
                 ready = true

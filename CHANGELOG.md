@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.2
+
+- Fixed (Android): downloads failed with an error like "unknown - qh0" in the signed release app. The app's code shrinker had renamed classes that a library looks up by name. Names are no longer changed, so the engine starts and TikTok and other links download again.
+- Android: an unknown error now includes the name of the error class in "Copy details", so a report says what actually broke.
+
+
 ## 2.6.1
 
 - Fixed (Android): updating from inside the app failed with a package error. Releases were signed with a different temporary key each time, so Android refused to install one over the other. Releases are now signed with one permanent key.
