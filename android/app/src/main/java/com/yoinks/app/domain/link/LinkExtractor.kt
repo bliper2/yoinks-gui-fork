@@ -13,7 +13,7 @@ object LinkExtractor {
 
     // Share texts sometimes drop the scheme for well-known short links.
     private val BARE = Regex(
-        """(?<![\w./])((?:vm|vt)\.tiktok\.com/\S+|youtu\.be/\S+|snapchat\.com/t/\S+|on\.soundcloud\.com/\S+)""",
+        """(?<![\w./])((?:vm|vt)\.tiktok\.com/\S+|youtu\.be/\S+|snapchat\.com/t/\S+|on\.soundcloud\.com/\S+|spotify\.link/\S+|pin\.it/\S+|b23\.tv/\S+)""",
         RegexOption.IGNORE_CASE,
     )
 
