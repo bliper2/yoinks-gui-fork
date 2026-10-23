@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.1
+
+- Fixed (Android): links shared from the Spotify app (spotify.link) did not open and said they were not a Spotify link. Spotify answered the phone with a link to its app instead of the song page; Yoinks now reads the song page either way.
+- Android: Mixcloud and Audiomack download as audio by default, and Pinterest, Tumblr, Threads, Bluesky, Kick, Bilibili, VK and LinkedIn are recognized by name. Short links from Pinterest (pin.it), Bilibili (b23.tv), X (t.co) and the Google app (search.app) are followed to the real page.
+- Android: "Open with Yoinks" also works for these sites and for m.soundcloud.com links.
+
 ## 3.0.0
 
 - The queue survives a restart (Windows, Linux, extension). Unfinished downloads come back paused when you open Yoinks again, and failed ones stay in the list so you can retry them. Paused downloads in the extension no longer vanish when the browser puts Yoinks to sleep.
