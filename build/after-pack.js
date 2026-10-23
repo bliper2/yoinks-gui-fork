@@ -10,11 +10,18 @@ const path = require('node:path')
 // --no-sandbox. Set from code that is too late for its helper processes (black window),
 // so the real binary is renamed and a launcher adds the flag when run from an AppImage.
 // The browser helper runs that same binary as Node (ELECTRON_RUN_AS_NODE). Node rejects
-// --no-sandbox, so the launcher adds the flag only for the real app.
+// --no-sandbox, so the launcher adds the flag only for the real app. electron-builder 26's
+// own AppImage launcher also adds it when user namespaces are blocked, so in Node mode the
+// launcher takes it out again.
 function linuxLauncher(name) {
   return `#!/bin/sh
 HERE=$(dirname "$(readlink -f "$0")")
-if [ -n "$APPIMAGE" ] && [ -z "$ELECTRON_RUN_AS_NODE" ]; then
+if [ -n "$ELECTRON_RUN_AS_NODE" ]; then
+  for arg in "$@"; do
+    shift
+    [ "$arg" = --no-sandbox ] || set -- "$@" "$arg"
+  done
+elif [ -n "$APPIMAGE" ]; then
   set -- --no-sandbox "$@"
 fi
 exec "$HERE/${name}.bin" "$@"

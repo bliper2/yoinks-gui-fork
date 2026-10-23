@@ -191,8 +191,21 @@ test('the right song ranks first', () => {
 test('the AppImage launcher does not pass --no-sandbox to the browser helper', () => {
   const { linuxLauncher } = require('../build/after-pack.js')
   const script = linuxLauncher('yoinks')
-  assert.match(script, /\[ -n "\$APPIMAGE" \] && \[ -z "\$ELECTRON_RUN_AS_NODE" \]/)
   assert.match(script, /exec "\$HERE\/yoinks\.bin" "\$@"/)
+  // Run it with the exec swapped for a print of the arguments it would pass on.
+  const { spawnSync } = require('node:child_process')
+  const file = path.join(os.tmpdir(), `yoinks-launcher-${process.pid}.sh`)
+  fs.writeFileSync(file, script.replace('exec "$HERE/yoinks.bin" "$@"', 'printf "[%s]" "$@"'))
+  const run = (env, ...args) => spawnSync('sh', [file, ...args], { env: { PATH: process.env.PATH, ...env }, encoding: 'utf-8' })
+  try {
+    if (run({}).error) return // no sh here (plain Windows)
+    // electron-builder's AppImage launcher may already have added --no-sandbox: Node mode drops it.
+    assert.equal(run({ APPIMAGE: '/a', ELECTRON_RUN_AS_NODE: '1' }, '--no-sandbox', '-e', 'a b').stdout, '[-e][a b]')
+    assert.equal(run({ APPIMAGE: '/a' }, '%U').stdout, '[--no-sandbox][%U]')
+    assert.equal(run({}, 'x').stdout, '[x]')
+  } finally {
+    fs.rmSync(file, { force: true })
+  }
 })
 
 test('the changelog copies the apps show are in sync', () => {
