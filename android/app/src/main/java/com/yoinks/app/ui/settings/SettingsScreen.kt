@@ -79,6 +79,8 @@ import com.yoinks.app.domain.model.DefaultFormat
 import com.yoinks.app.domain.model.DownloadPreset
 import com.yoinks.app.domain.model.FolderBy
 import com.yoinks.app.domain.model.ShareBehavior
+import com.yoinks.app.domain.model.SponsorBlock
+import com.yoinks.app.domain.settings.SettingsValidator
 import com.yoinks.app.domain.model.ThemeMode
 import com.yoinks.app.domain.model.UiStyle
 import com.yoinks.app.ui.components.ColorPickerDialog
@@ -348,6 +350,15 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                     onClick = callbacks.importCookies,
                 ) { if (ui.hasCookies) TextActionButton("Remove", callbacks.removeCookies) }
                 if (ui.hasCookies) SwitchRow("Use cookies", s.useCookies, { v -> set { it.copy(useCookies = v) } })
+                ChoiceRow(
+                    "Cut sponsored parts (SponsorBlock)",
+                    SponsorBlock.entries,
+                    s.sponsorBlock,
+                    { it.label },
+                    { v -> set { it.copy(sponsorBlock = v) } },
+                    "Removes segments marked by SponsorBlock users from YouTube videos. Not used for clips.",
+                )
+                ProxyEditor(s, ui.errors["proxy"], set)
                 Text(
                     "Privacy: the cookies file stays inside Yoinks on this phone. yt-dlp sends each cookie only to its own site so it treats you as signed in. Anyone with the file can use those accounts, so remove it when you no longer need it.",
                     style = MaterialTheme.typography.bodySmall,
@@ -433,6 +444,22 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
         )
     }
+}
+
+@Composable
+private fun ProxyEditor(s: AppSettings, error: String?, set: ((AppSettings) -> AppSettings) -> Unit) {
+    var text by remember(s.proxy) { mutableStateOf(s.proxy) }
+    val valid = text.isBlank() || SettingsValidator.PROXY.matches(text.trim())
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = it; if (it.isBlank() || SettingsValidator.PROXY.matches(it.trim())) set { st -> st.copy(proxy = it.trim()) } },
+        label = { Text("Proxy (optional)") },
+        placeholder = { Text("socks5://127.0.0.1:1080") },
+        isError = !valid || error != null,
+        supportingText = { Text(if (!valid) "Use socks5://host:port or http://host:port" else error ?: "For videos blocked in your country. Only yt-dlp uses it.") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

@@ -45,7 +45,18 @@
     ['brave', 'Brave'],
     ['chrome', 'Chrome'],
     ['edge', 'Edge'],
+    ['chromium', 'Chromium'],
+    ['vivaldi', 'Vivaldi'],
+    ['opera', 'Opera'],
+    ['whale', 'Whale'],
   ]
+  // yt-dlp's --sponsorblock-remove categories. YouTube only; other sites ignore it.
+  const SPONSORBLOCK = [
+    ['off', 'Off'],
+    ['sponsor', 'Sponsors only'],
+    ['most', 'Sponsors, self-promo, intros and outros'],
+  ]
+  const SPONSORBLOCK_CATEGORIES = { sponsor: 'sponsor', most: 'sponsor,selfpromo,interaction,intro,outro' }
   const THEMES = [
     ['system', 'System'],
     ['light', 'Light'],
@@ -106,12 +117,15 @@
     { key: 'retries', section: 'Queue', type: 'number', min: 0, max: 10, step: 1, default: 2, label: 'Retry failed downloads', help: 'How many times to try again after a network error.' },
     { key: 'notifications', section: 'Queue', type: 'toggle', default: true, label: 'Show a notification when a download finishes or fails' },
     { key: 'confirmClose', section: 'Queue', type: 'toggle', default: true, only: 'desktop', label: 'Ask before closing while downloads are running' },
+    { key: 'closeToTray', section: 'Queue', type: 'toggle', default: false, only: 'desktop', label: 'Keep Yoinks running in the tray when the window is closed', help: 'Downloads keep going. Quit from the tray icon.' },
     { key: 'scheduleOn', section: 'Queue', type: 'toggle', default: false, only: 'desktop', label: 'Only download between set times', help: 'Waiting downloads start when the window opens. Running ones are not interrupted.' },
     { key: 'scheduleFrom', section: 'Queue', type: 'time', default: '01:00', only: 'desktop', label: 'Start at' },
     { key: 'scheduleTo', section: 'Queue', type: 'time', default: '07:00', only: 'desktop', label: 'Stop starting new downloads at' },
 
     { key: 'ytdlpAutoUpdate', section: 'yt-dlp', type: 'toggle', default: true, label: 'Keep yt-dlp up to date (checks weekly)' },
     { key: 'cookiesFromBrowser', section: 'yt-dlp', type: 'select', options: COOKIE_BROWSERS, default: 'off', label: 'Use browser cookies', help: 'For age-restricted or members-only videos.' },
+    { key: 'sponsorBlock', section: 'yt-dlp', type: 'select', options: SPONSORBLOCK, default: 'off', label: 'Cut sponsored parts (SponsorBlock)', help: 'Removes segments marked by SponsorBlock users from YouTube videos. Not used for clips.' },
+    { key: 'proxy', section: 'yt-dlp', type: 'proxy', default: '', label: 'Proxy', help: 'Optional, for videos blocked in your country. Like socks5://127.0.0.1:1080 or http://host:8080. Empty means none.' },
 
     { key: 'style', section: 'Look', type: 'segmented', options: STYLES, default: 'clean', label: 'Style' },
     { key: 'theme', section: 'Look', type: 'segmented', options: THEMES, default: 'system', label: 'Theme' },
@@ -131,6 +145,14 @@
   ]
 
   const BY_KEY = Object.fromEntries(FIELDS.map(field => [field.key, field]))
+
+  // scheme://[user:pass@]host:port, nothing else (no spaces, no path).
+  const PROXY = /^(https?|socks4a?|socks5h?):\/\/([^\s:@/]+(:[^\s@/]*)?@)?[A-Za-z0-9.\-]+:\d{1,5}\/?$/
+
+  /** The proxy without its password, for health checks and support reports. */
+  function proxyLabel(proxy) {
+    return String(proxy ?? '').replace(/\/\/[^@/]*@/, '//***@')
+  }
 
   function defaults() {
     const copy = value => (Array.isArray(value) ? [...value] : typeof value === 'object' ? { ...value } : value)
@@ -166,6 +188,11 @@
         const error = typeof value === 'string' ? templateModule().validate(value) : 'must be text'
         return error ? [field.default, error] : [value.trim()]
       }
+      case 'proxy':
+        if (value === '') return ['']
+        return typeof value === 'string' && value.trim().length <= 200 && PROXY.test(value.trim())
+          ? [value.trim()]
+          : [field.default, 'must look like socks5://host:port or http://host:port']
       case 'time':
         return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? [value] : [field.default, 'must be a time like 07:30']
       case 'presets': {
@@ -262,5 +289,5 @@
     return validate(stored ?? {}, defaults()).settings
   }
 
-  return { TERMS_VERSION, FIELDS, BY_KEY, FORMATS, AUDIO_FORMATS, COOKIE_BROWSERS, FOLDER_BY, MAX_PRESETS, MAX_WATCHES, MAX_SEEN, defaults, validate, sanitize }
+  return { TERMS_VERSION, FIELDS, BY_KEY, FORMATS, AUDIO_FORMATS, COOKIE_BROWSERS, SPONSORBLOCK, SPONSORBLOCK_CATEGORIES, FOLDER_BY, MAX_PRESETS, MAX_WATCHES, MAX_SEEN, defaults, validate, sanitize, proxyLabel }
 })

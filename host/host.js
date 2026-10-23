@@ -38,6 +38,7 @@ process.on('unhandledRejection', error => log(`unhandled rejection ${error?.stac
 process.on('exit', code => log(`exit ${code}`))
 
 const MAX_MESSAGE = 1024 * 1024 // Chrome's limit for host -> browser
+const MAX_INCOMING = 8 * 1024 * 1024 // the biggest is a settings import or a batch prefill
 
 function send(message) {
   const body = Buffer.from(JSON.stringify(message))
@@ -64,6 +65,12 @@ process.stdin.on('data', chunk => {
   pending = Buffer.concat([pending, chunk])
   while (pending.length >= 4) {
     const length = pending.readUInt32LE(0)
+    // Nothing the extension sends comes close; a bigger header is a broken stream.
+    if (length > MAX_INCOMING) {
+      log(`message too large (${length} bytes)`)
+      session.close()
+      process.exit(1)
+    }
     if (pending.length < 4 + length) break
     const body = pending.subarray(4, 4 + length)
     pending = pending.subarray(4 + length)

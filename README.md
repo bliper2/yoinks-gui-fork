@@ -67,6 +67,9 @@ What changed in each version is in [CHANGELOG.md](CHANGELOG.md). The apps also s
 - Automatic retries for network errors, and notifications when a download finishes or fails.
 - A download window ("only between 01:00 and 07:00") on Windows, Linux and Android. Android can also wait on low battery or Data Saver.
 - Sort files into folders by uploader or website, and split videos with chapters.
+- Unfinished downloads come back paused after a restart, on every platform.
+- Search your recent downloads and download any of them again with the same quality.
+- Windows and Linux: progress on the taskbar icon, and an optional tray icon that keeps downloads going with the window closed.
 
 **In your browser**
 
@@ -90,7 +93,7 @@ What changed in each version is in [CHANGELOG.md](CHANGELOG.md). The apps also s
 
 - Four styles (Clean, Playful, Neon, Classic), light, dark or system, five accent colors and a custom one. The navigation can sit at the top or float at the bottom. Android has the same styles.
 
-Everything is configurable on one settings page: download folder, file name template with a live preview, audio format and bitrate, tags, cover art, subtitles, speed limit, retries, browser cookies for age-restricted videos, export and import as JSON.
+Everything is configurable on one settings page: download folder, file name template with a live preview, audio format and bitrate, tags, cover art, subtitles, speed limit, retries, browser cookies for age-restricted videos, SponsorBlock to cut sponsored parts out of YouTube videos, a proxy for videos blocked in your country, export and import as JSON.
 
 ## Screenshots
 

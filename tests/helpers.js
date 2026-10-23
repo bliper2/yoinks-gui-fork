@@ -6,7 +6,7 @@
 const Controller = require('../extension/shared/controller.js')
 const Schema = require('../extension/shared/settings-schema.js')
 
-function makeController({ platform = 'extension', settings = {}, reply = {} } = {}) {
+function makeController({ platform = 'extension', settings = {}, reply = {}, stored = {} } = {}) {
   const channels = []
   let current = { ...Schema.defaults(), termsAccepted: Schema.TERMS_VERSION, ...settings }
   const requests = []
@@ -31,11 +31,13 @@ function makeController({ platform = 'extension', settings = {}, reply = {} } = 
   }
 
   const notifications = []
-  const controller = Controller.create({ backend, storage: { load: async () => ({}), save() {} }, notify: n => notifications.push(n), platform })
+  const saved = {}
+  const storage = { load: async () => stored, save: partial => Object.assign(saved, structuredClone(partial)) }
+  const controller = Controller.create({ backend, storage, notify: n => notifications.push(n), platform })
   const tick = (ms = 5) => new Promise(resolve => setTimeout(resolve, ms))
   const send = (channel, message) => channel.handlers.onMessage(message)
   const lastChannel = () => channels.at(-1)
-  return { controller, channels, requests, notifications, tick, send, lastChannel, settings: () => current }
+  return { controller, channels, requests, notifications, saved, tick, send, lastChannel, settings: () => current }
 }
 
 const MEDIA = (extra = {}) => ({

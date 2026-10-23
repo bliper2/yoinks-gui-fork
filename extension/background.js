@@ -14,7 +14,7 @@ const HOST_NAME = 'com.yoinks.host'
 
 function hostError(reason = '') {
   return /not found|forbidden|not allowed/i.test(reason)
-    ? 'The Yoinks helper is not installed. In the yoinks-gui folder run "npm run extension:install", then restart the browser.'
+    ? 'The Yoinks helper is not installed. Start the installed Yoinks app once (it sets the helper up), or run "npm run extension:install" in the Yoinks folder. Then restart the browser.'
     : `The Yoinks helper stopped. ${reason}`.trim()
 }
 
@@ -66,7 +66,7 @@ const backend = {
 // ---------- storage, notifications ----------
 
 const storage = {
-  load: () => chrome.storage.local.get(['history', 'settings']),
+  load: () => chrome.storage.local.get(['history', 'settings', 'queue']),
   save: partial => chrome.storage.local.set(partial),
 }
 
@@ -128,12 +128,7 @@ function badgeTitle(view, active) {
   return bits.length ? `Yoinks: ${bits.join(', ')}` : 'Yoinks (Alt+Y)'
 }
 
-function percentOf(job) {
-  const p = job.progress
-  const fraction = job.processing ? 1 : p?.totalBytes ? Math.min(1, p.downloadedBytes / p.totalBytes) : null
-  if (job.item) return Math.floor(((job.item.index - 1 + (fraction ?? 0)) / job.item.count) * 100)
-  return fraction === null ? null : Math.min(99, Math.floor(fraction * 100))
-}
+const percentOf = YoinksController.percentOf
 
 // In-page buttons show the state of jobs they started.
 function onJobUpdate(job) {

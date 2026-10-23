@@ -53,6 +53,13 @@ enum class FolderBy(val label: String) {
     SITE("Website"),
 }
 
+/** yt-dlp's --sponsorblock-remove categories (YouTube only). Same choices as the desktop app. */
+enum class SponsorBlock(val categories: String?, val label: String) {
+    OFF(null, "Off"),
+    SPONSOR("sponsor", "Sponsors only"),
+    MOST("sponsor,selfpromo,interaction,intro,outro", "Sponsors, self-promo, intros and outros"),
+}
+
 enum class ShareBehavior(val label: String) {
     ASK("Show the options sheet"),
     INSTANT("Download instantly with the default format"),
@@ -113,6 +120,9 @@ data class AppSettings(
     val ytdlpAutoUpdate: Boolean = true,
     val ytdlpUpdateDays: Int = 7,
     val useCookies: Boolean = false,
+    val sponsorBlock: SponsorBlock = SponsorBlock.OFF,
+    /** "" or scheme://[user:pass@]host:port, used by yt-dlp only. */
+    val proxy: String = "",
     // Remembered quality per website: "youtube" -> "720", "soundcloud" -> "audio".
     val siteFormats: Map<String, String> = emptyMap(),
     /** Named download combinations, picked with one tap on the format list. */

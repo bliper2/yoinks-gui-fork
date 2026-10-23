@@ -197,7 +197,15 @@
       event.preventDefault()
     }
 
-    const RENDERERS = { toggle: toggleField, select: selectField, number: numberField, text: textField, time: timeField, folder: folderField, segmented: segmentedField, accent: accentField, template: templateField }
+    function proxyField(field) {
+      const shell = textField(field)
+      const control = shell.row.querySelector('input')
+      control.placeholder = 'No proxy'
+      control.autocomplete = 'off'
+      return shell
+    }
+
+    const RENDERERS = { toggle: toggleField, select: selectField, number: numberField, text: textField, proxy: proxyField, time: timeField, folder: folderField, segmented: segmentedField, accent: accentField, template: templateField }
 
     // ---------- sections ----------
 

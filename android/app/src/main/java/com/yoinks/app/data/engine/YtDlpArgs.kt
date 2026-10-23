@@ -28,18 +28,22 @@ object YtDlpArgs {
     fun cookies(settings: AppSettings, cookieFile: File?): List<String> =
         if (settings.useCookies && cookieFile != null && cookieFile.isFile) listOf("--cookies", cookieFile.absolutePath) else emptyList()
 
+    /** Every call that goes online: the imported cookies and the proxy. */
+    fun online(settings: AppSettings, cookieFile: File?): List<String> =
+        cookies(settings, cookieFile) + if (settings.proxy.isNotEmpty()) listOf("--proxy", settings.proxy) else emptyList()
+
     fun probe(playlist: Boolean, settings: AppSettings, cookieFile: File?): List<String> =
         listOf("-J", "--no-warnings") +
             (if (playlist) listOf("--flat-playlist", "--yes-playlist") else listOf("--no-playlist")) +
-            cookies(settings, cookieFile)
+            online(settings, cookieFile)
 
     /** A text search: the "ytsearchN:words" pseudo-link goes after "--" like any link. */
     fun searchVideos(settings: AppSettings, cookieFile: File?): List<String> =
-        listOf("-J", "--flat-playlist", "--no-warnings") + cookies(settings, cookieFile)
+        listOf("-J", "--flat-playlist", "--no-warnings") + online(settings, cookieFile)
 
     fun searchMusic(limit: Int, settings: AppSettings, cookieFile: File?): List<String> =
         listOf("--no-warnings", "--skip-download", "--playlist-items", "1-$limit", "--print", "%(.{id,title,artist,album,duration,channel})j") +
-            cookies(settings, cookieFile)
+            online(settings, cookieFile)
 
     fun format(request: DownloadRequest, settings: AppSettings, platform: Platform): List<String> {
         if (request.kind == MediaKind.AUDIO) {
@@ -76,6 +80,8 @@ object YtDlpArgs {
             val end = clip.endSeconds?.let { "$it" } ?: "inf"
             args += listOf("--download-sections", "*${clip.startSeconds}-$end", "--force-keyframes-at-cuts")
         }
+        // A clip's times are the video's own: cutting segments out would shift them.
+        settings.sponsorBlock.categories?.takeIf { request.clip == null }?.let { args += listOf("--sponsorblock-remove", it) }
         if (settings.embedMetadata || forceTags) args += "--embed-metadata"
         if (settings.embedThumbnail || forceTags) {
             args += listOf("--embed-thumbnail", "--convert-thumbnails", "jpg")
@@ -93,7 +99,7 @@ object YtDlpArgs {
             args += listOf("--split-chapters", "-o", "chapter:" + File(outputDir, "%(title).100B/%(section_number)03d - %(section_title).100B.%(ext)s").absolutePath)
         }
         if (platform == Platform.TWITCH) args += listOf("--concurrent-fragments", "4")
-        args += cookies(settings, cookieFile)
+        args += online(settings, cookieFile)
         // Files land in the gallery with today's date, not the upload date.
         args += "--no-mtime"
 

@@ -26,8 +26,8 @@ android {
         targetSdk = 37
         // Same version as the desktop app: one GitHub release (tag v<versionName>)
         // carries both, and the in-app updater compares against it.
-        versionCode = 262
-        versionName = "2.6.2"
+        versionCode = 300
+        versionName = "3.0.0"
     }
 
     signingConfigs {
@@ -103,6 +103,11 @@ kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
     }
+}
+
+// Robolectric's Android 36+ sandbox needs Java 21; the app itself still targets 17.
+tasks.withType<Test>().configureEach {
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 }
 
 dependencies {

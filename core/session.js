@@ -37,6 +37,8 @@ const Errors = require('../extension/shared/errors.js')
 const RETRY_AFTER_UPDATE = new Set(['outdated', 'forbidden', 'login'])
 const AUTO_UPDATE_EVERY_MS = 30 * 60 * 1000
 let lastAutoUpdate = 0
+const NIGHTLY_EVERY_MS = 60 * 60 * 1000
+let lastNightlyUpdate = 0
 
 class Session {
   /**
@@ -155,7 +157,13 @@ class Session {
       const before = await ytdlp.versionInfo()
       if (!before.version || !before.managed) throw err // a system yt-dlp is not ours to update
       this.send({ type: 'status', message: 'Updating yt-dlp…' })
-      const after = await ytdlp.updateNow().catch(() => null)
+      let after = await ytdlp.updateNow().catch(() => null)
+      // Already on the newest stable: a fix for a changed site is often only in nightly yet.
+      if (after?.version === before.version && err.code === 'outdated' && Date.now() - lastNightlyUpdate >= NIGHTLY_EVERY_MS) {
+        lastNightlyUpdate = Date.now()
+        this.send({ type: 'status', message: 'Trying the newest yt-dlp build…' })
+        after = await ytdlp.updateToNightly().catch(() => null)
+      }
       if (!after || after.version === before.version) throw err
       return step()
     }

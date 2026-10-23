@@ -19,7 +19,7 @@
 })(typeof self !== 'undefined' ? self : this, function (Schema, Formats, Sites, Schedule) {
   'use strict'
 
-  const HISTORY_LIMIT = 50
+  const HISTORY_LIMIT = 200
   const RETRY_DELAY_MS = 3000
   const TOAST_LIMIT = 4
 
@@ -84,6 +84,7 @@
     function broadcast() {
       clearTimeout(timer)
       timer = null
+      saveQueue()
       onState(view())
     }
     // Progress arrives many times a second; the UI needs a few frames.
@@ -105,6 +106,7 @@
       const saved = (await storage.load()) ?? {}
       history = Array.isArray(saved.history) ? saved.history : []
       if (saved.settings) settings = Schema.sanitize(saved.settings)
+      restoreQueue(saved.queue)
       await refreshSettings()
       broadcast()
     })()
@@ -130,6 +132,41 @@
 
     function saveHistory() {
       storage.save({ history })
+    }
+
+    // ---------- the queue across restarts ----------
+    // Unfinished jobs are saved whenever the queue changes (not on progress).
+    // They come back paused, so nothing starts downloading by surprise, and
+    // are looked up again when resumed. The lookup card is not kept.
+
+    const KEPT_PHASES = ['queued', 'probing', 'downloading', 'paused', 'failed', 'review']
+    const KEPT_FIELDS = ['url', 'createdAt', 'title', 'kind', 'convertTo', 'wantFormat', 'wantPlaylist', 'clip', 'items', 'overrides', 'selections', 'choiceLabel', 'choiceKind']
+    let savedQueueKey = null
+
+    function saveQueue() {
+      const queue = [...jobs.values()]
+        .filter(job => !job.focus && KEPT_PHASES.includes(job.phase))
+        .map(job => ({ ...Object.fromEntries(KEPT_FIELDS.map(key => [key, job[key] ?? null])), failed: job.phase === 'failed', error: job.phase === 'failed' ? job.error : null }))
+      const key = JSON.stringify(queue)
+      if (key === savedQueueKey) return
+      savedQueueKey = key
+      storage.save({ queue })
+    }
+
+    function restoreQueue(saved) {
+      if (!Array.isArray(saved)) return
+      for (const item of saved.slice(0, 500)) {
+        if (!item || typeof item.url !== 'string' || !item.url) continue
+        const fields = Object.fromEntries(KEPT_FIELDS.filter(key => item[key] != null).map(key => [key, item[key]]))
+        newJob(item.url, {
+          ...fields,
+          createdAt: Number(item.createdAt) || Date.now(),
+          phase: item.failed ? 'failed' : 'paused',
+          error: item.failed ? item.error ?? { code: 'unknown', message: 'Download failed.' } : null,
+          note: item.failed ? null : 'Paused when Yoinks closed',
+        })
+      }
+      savedQueueKey = null
     }
 
     // ---------- jobs ----------
@@ -421,6 +458,8 @@
         kind: job.choiceKind ?? (job.kind === 'spotify' ? 'audio' : null),
         label: job.choiceLabel ?? (job.kind === 'spotify' ? 'Spotify' : null),
         at: Date.now(),
+        // What "Download again" repeats.
+        again: job.convertTo ? null : { format: job.wantFormat ?? null, playlist: Boolean(job.wantPlaylist || folder), clip: job.clip ?? null, items: job.items ?? null, overrides: job.overrides ?? null },
       }
       job.phase = 'done'
       jobChanged(job)
@@ -599,6 +638,7 @@
         case 'resume':
           if (job?.phase !== 'paused') return
           job.phase = 'queued'
+          job.note = null
           return pump()
         case 'retry':
           if (!job) return
@@ -627,7 +667,7 @@
           for (const j of jobs.values()) await command({ type: 'pause', id: j.id })
           break
         case 'resumeAll':
-          for (const j of jobs.values()) if (j.phase === 'paused') j.phase = 'queued'
+          for (const j of jobs.values()) if (j.phase === 'paused') Object.assign(j, { phase: 'queued', note: null })
           return pump()
         case 'clearFinished':
           for (const j of [...jobs.values()]) if (j.phase === 'failed') removeJob(j)
@@ -747,6 +787,25 @@
           }
           break
         }
+        case 'history:again': {
+          const entry = historyEntry(cmd.entryId)
+          const url = entry?.url ? urlsFrom(entry.url)[0] : null
+          if (!url) break
+          const again = entry.again ?? {}
+          // 'best', 'audio' or a height the format list offered (e.g. '360').
+          const format = /^(best|audio|\d{3,4})$/.test(String(again.format)) ? again.format : defaultFormatFor(url)
+          const clip = again.clip && Number.isFinite(again.clip.start) ? again.clip : null
+          newJob(url, {
+            title: entry.title,
+            wantFormat: format,
+            wantPlaylist: again.playlist === true,
+            clip,
+            items: Array.isArray(again.items) ? again.items.filter(Number.isInteger) : null,
+            overrides: again.overrides ? overridesOf(again.overrides) : null,
+          })
+          toast('info', `Added “${entry.title}” to the queue again.`)
+          return pump()
+        }
         case 'history:forget':
           history = history.filter(entry => entry.id !== cmd.entryId)
           saveHistory()
@@ -810,5 +869,13 @@
     return { ready, command, view, historyEntry, broadcast, urlsFrom }
   }
 
-  return { create, LOOKUP_PHASES }
+  /** A job's progress as a whole percent (0-99 until done), or null when unknown. */
+  function percentOf(job) {
+    const p = job.progress
+    const fraction = job.processing ? 1 : p?.totalBytes ? Math.min(1, p.downloadedBytes / p.totalBytes) : null
+    if (job.item) return Math.floor(((job.item.index - 1 + (fraction ?? 0)) / job.item.count) * 100)
+    return fraction === null ? null : Math.min(99, Math.floor(fraction * 100))
+  }
+
+  return { create, percentOf, LOOKUP_PHASES }
 })

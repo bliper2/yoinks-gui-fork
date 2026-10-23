@@ -19,9 +19,12 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +85,20 @@ fun shareFile(context: Context, item: HistoryEntity) {
     context.startActivity(Intent.createChooser(send, item.title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
+/** Every word of the search must appear in the title, file name or website. */
+object HistorySearch {
+    const val SHOW_AFTER = 6
+
+    fun filter(items: List<HistoryEntity>, query: String): List<HistoryEntity> {
+        val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return items
+        return items.filter { item ->
+            val text = "${item.title} ${item.displayName} ${item.platform}".lowercase()
+            words.all { it in text }
+        }
+    }
+}
+
 @Composable
 fun HistoryRoute(onRedownload: (HistoryEntity) -> Unit, onMessage: (String) -> Unit, vm: HistoryViewModel = hiltViewModel()) {
     val items by vm.items.collectAsState()
@@ -105,14 +122,31 @@ fun HistoryScreen(
     modifier: Modifier = Modifier,
 ) {
     var confirm by remember { mutableStateOf<HistoryEntity?>(null) }
+    var query by remember { mutableStateOf("") }
+    val shown = remember(items, query) { HistorySearch.filter(items, query) }
     Column(modifier.fillMaxSize()) {
         Text("History", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
         if (items.isEmpty()) {
             EmptyState(Icons.Rounded.History, "No downloads yet", "Everything you download is listed here.")
             return@Column
         }
+        // Search appears once the list is long enough to need it.
+        if (items.size > HistorySearch.SHOW_AFTER || query.isNotEmpty()) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Search downloads") },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+            )
+        }
+        if (shown.isEmpty()) {
+            EmptyState(Icons.Rounded.Search, "Nothing found", "No download matches “${query.trim()}”.")
+            return@Column
+        }
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-            items(items, key = { it.id }) { item ->
+            items(shown, key = { it.id }) { item ->
                 ListItem(
                     headlineContent = { Text(item.title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                     supportingContent = {

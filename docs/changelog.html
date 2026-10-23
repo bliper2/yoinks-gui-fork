@@ -46,8 +46,25 @@
   <main>
     <h1>Changelog</h1>
     <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v3.0.0">
+      <h2>3.0.0 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>The queue survives a restart (Windows, Linux, extension). Unfinished downloads come back paused when you open Yoinks again, and failed ones stay in the list so you can retry them. Paused downloads in the extension no longer vanish when the browser puts Yoinks to sleep.</li>
+        <li>SponsorBlock: Settings, yt-dlp, &quot;Cut sponsored parts&quot; removes sponsor segments (or also self-promo, intros and outros) from YouTube videos. All platforms.</li>
+        <li>Proxy setting for videos blocked in your country, like <code>socks5://127.0.0.1:1080</code>. All platforms. The health check shows when one is set.</li>
+        <li>Search your recent downloads, and download any of them again with the same quality (Windows, Linux, extension; Android already had &quot;Download again&quot; and now has search too). Yoinks keeps the last 200 downloads instead of 50.</li>
+        <li>Windows and Linux: download progress on the taskbar icon, and an optional tray icon. With &quot;Keep Yoinks running in the tray&quot; on, closing the window keeps downloads going; quit from the tray menu.</li>
+        <li>&quot;Use browser cookies&quot; also works with Chromium, Vivaldi, Opera and Whale.</li>
+        <li>When a site still fails after a normal yt-dlp update, Windows, Linux and the extension now try the nightly build once, like Android does.</li>
+        <li>The yt-dlp that Yoinks downloads on first run is checked against the SHA-256 that yt-dlp publishes, and is not used if it does not match.</li>
+        <li>New messages for a proxy that does not connect and for videos blocked in your country.</li>
+        <li>Fixed: a crash while saving could wipe the list of recent downloads on Windows and Linux.</li>
+        <li>The extension's &quot;helper is not installed&quot; message now says that starting the installed app sets it up.</li>
+        <li>Updated Electron to 44 and the build tools; Android to Kotlin 2.4.21 and Gradle 9.8.2.</li>
+      </ul>
+    </section>
     <section class="release" id="v2.6.2">
-      <h2>2.6.2 <span class="latest">Latest</span></h2>
+      <h2>2.6.2</h2>
       <ul>
         <li>Fixed (Android): downloads failed with an error like &quot;unknown - qh0&quot; in the signed release app. The app's code shrinker had renamed classes that a library looks up by name. Names are no longer changed, so the engine starts and TikTok and other links download again.</li>
         <li>Android: an unknown error now includes the name of the error class in &quot;Copy details&quot;, so a report says what actually broke.</li>

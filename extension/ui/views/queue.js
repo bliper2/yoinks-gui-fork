@@ -23,6 +23,7 @@
     if (job.phase === 'failed') return job.error?.message ?? 'Download failed.'
     if (job.phase === 'queued' && job.error) return `${job.status ?? 'Retrying…'} ${job.error.message}`
     if (job.phase === 'queued' && job.waitNote) return job.waitNote
+    if (job.phase === 'paused' && job.note) return job.note
     if (job.phase !== 'downloading') return (job.phase === 'probing' && job.status) || PHASE_TEXT[job.phase] || ''
     const p = job.progress
     const bits = []
@@ -57,11 +58,24 @@
     )
 
     const recentList = h('div', { class: 'recent-list' })
+    const recentEmpty = h('p', { class: 'recent-empty', hidden: true })
+    // Search appears once the list is long enough to need it.
+    const recentSearch = h('input', {
+      class: 'field recent-search',
+      type: 'search',
+      placeholder: 'Search downloads',
+      'aria-label': 'Search recent downloads',
+      spellcheck: 'false',
+      hidden: true,
+      oninput: () => lastView && renderHistory(lastView.history),
+    })
     const recentSection = h(
       'section',
       { class: 'list-section', 'aria-label': 'Recent downloads', hidden: true },
       h('h2', {}, h('span', { text: 'Recent' }), button({ text: 'Clear', variant: 'link', onClick: () => send({ type: 'history:clear' }) })),
+      recentSearch,
       recentList,
+      recentEmpty,
     )
 
     // ---------- queue rows (updated in place so buttons keep focus) ----------
@@ -138,14 +152,22 @@
 
     // ---------- recent ----------
 
+    const SEARCH_AFTER = 6
+    const SHOWN = 20
     let renderedHistory = null
     function renderHistory(history) {
-      const key = JSON.stringify(history.map(e => e.id))
+      const query = recentSearch.value.trim().toLowerCase()
+      const key = JSON.stringify([query, history.map(e => e.id)])
       recentSection.hidden = history.length === 0
+      recentSearch.hidden = history.length <= SEARCH_AFTER && !query
       if (key === renderedHistory) return
       renderedHistory = key
+      const words = query.split(/\s+/).filter(Boolean)
+      const matches = words.length ? history.filter(entry => words.every(word => `${entry.title} ${entry.label ?? ''}`.toLowerCase().includes(word))) : history
+      recentEmpty.hidden = matches.length > 0
+      recentEmpty.textContent = matches.length ? '' : `Nothing in your recent downloads matches “${recentSearch.value.trim()}”.`
       recentList.replaceChildren(
-        ...history.slice(0, 20).map(entry =>
+        ...matches.slice(0, SHOWN).map(entry =>
           h(
             'div',
             { class: 'recent-row' },
@@ -157,6 +179,7 @@
               { class: 'recent-actions' },
               button({ icon: 'folder', label: `Show ${filenameOf(entry.folder ?? entry.filepath)} in folder`, variant: 'ghost', size: 'sm', onClick: () => send({ type: 'file:reveal', filepath: entry.folder ?? entry.filepath }) }),
               entry.folder ? null : button({ icon: 'play', label: `Open ${filenameOf(entry.filepath)}`, variant: 'ghost', size: 'sm', onClick: () => send({ type: 'file:open', filepath: entry.filepath }) }),
+              entry.url ? button({ icon: 'retry', label: `Download ${entry.title} again`, variant: 'ghost', size: 'sm', onClick: () => send({ type: 'history:again', entryId: entry.id }) }) : null,
               button({ icon: 'close', label: 'Remove from list', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'history:forget', entryId: entry.id }) }),
             ),
           ),

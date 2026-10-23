@@ -9,6 +9,7 @@ const path = require('node:path')
 
 const ytdlp = require('../main/ytdlp')
 const store = require('./settings-store')
+const Schema = require('../extension/shared/settings-schema.js')
 
 const ONE_GB = 1024 ** 3
 
@@ -66,6 +67,12 @@ async function checkInternet() {
   }
 }
 
+// The proxy is only used by yt-dlp; show it (without a password) so a forgotten one is easy to spot.
+function checkProxy(settings) {
+  if (!settings.proxy) return null
+  return { id: 'proxy', label: 'Proxy', status: 'ok', detail: `yt-dlp goes through ${Schema.proxyLabel(settings.proxy)}. Clear it in Settings if downloads fail to connect.` }
+}
+
 function checkRuntime() {
   return { id: 'runtime', label: 'Yoinks engine', status: 'ok', detail: `Running (Node ${process.versions.node}${process.versions.electron ? `, Electron ${process.versions.electron}` : ''}).` }
 }
@@ -80,6 +87,8 @@ function ageInDays(version, now = Date.now()) {
 
 async function run(settings = store.load()) {
   const checks = await Promise.all([checkYtDlp(settings), checkFfmpeg(), checkFolder(settings), checkInternet()])
+  const proxy = checkProxy(settings)
+  if (proxy) checks.push(proxy)
   checks.push(checkRuntime())
   const worst = checks.some(c => c.status === 'fail') ? 'fail' : checks.some(c => c.status === 'warn') ? 'warn' : 'ok'
   return { checks, status: worst, at: Date.now() }

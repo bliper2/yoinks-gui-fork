@@ -22,6 +22,8 @@ object SettingsValidator {
     private val PRESET_ID = Regex("^[a-z0-9]{1,12}$")
     private val AUDIO_EXTS = setOf("mp3", "m4a", "flac", "opus")
     private const val MAX_PRESETS = 12
+    // Same rule as the desktop app: scheme://[user:pass@]host:port, nothing else.
+    val PROXY = Regex("""^(https?|socks4a?|socks5h?)://([^\s:@/]+(:[^\s@/]*)?@)?[A-Za-z0-9.\-]+:\d{1,5}/?$""")
 
     fun validate(candidate: AppSettings, previous: AppSettings = AppSettings()): Validated {
         val errors = linkedMapOf<String, String>()
@@ -79,6 +81,13 @@ object SettingsValidator {
         if (s.siteFormats.size > 40 || s.siteFormats.any { (site, quality) -> !SITE.matches(site) || quality !in QUALITIES }) {
             errors["siteFormats"] = "Remembered qualities must be a website and a known quality."
             s = s.copy(siteFormats = s.siteFormats.filter { (site, quality) -> SITE.matches(site) && quality in QUALITIES }.entries.take(40).associate { it.key to it.value })
+        }
+        val proxy = s.proxy.trim()
+        if (proxy.isNotEmpty() && (proxy.length > 200 || !PROXY.matches(proxy))) {
+            errors["proxy"] = "Proxy must look like socks5://host:port or http://host:port."
+            s = s.copy(proxy = previous.proxy.takeIf { it.isEmpty() || PROXY.matches(it) } ?: "")
+        } else {
+            s = s.copy(proxy = proxy)
         }
         if (!VERSION.matches(s.lastSeenVersion)) s = s.copy(lastSeenVersion = "")
         if (s.termsAccepted < 0) s = s.copy(termsAccepted = 0)

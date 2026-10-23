@@ -14,6 +14,7 @@ const store = require('../core/settings-store')
 const files = require('../core/files')
 const updater = require('./updater')
 const helper = require('./helper')
+const Tray = require('./tray')
 const Ytdlp = require('./ytdlp')
 
 const ROOT = path.join(__dirname, '..')
@@ -21,14 +22,15 @@ const ROOT = path.join(__dirname, '..')
 // pins and notifications group under one Yoinks icon.
 const APP_ID = 'com.mrkraps.yoinks-gui'
 if (process.platform === 'win32') app.setAppUserModelId(APP_ID)
+// Electron picks Wayland by itself when the session is one (since Electron 38).
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('ozone-platform-hint', 'auto') // Wayland when the session is one
   // An AppImage cannot carry the SUID sandbox helper (and many distros block the
   // unprivileged alternative), so it would not start. The .deb/.rpm keep the sandbox.
   if (process.env.APPIMAGE) app.commandLine.appendSwitch('no-sandbox')
 }
 const STATE_PATH = path.join(app.getPath('userData'), 'app-state.json')
 const LEGAL = { terms: 'terms.md', privacy: 'privacy.md', changelog: 'changelog.md' }
+const ICON = path.join(ROOT, 'extension', 'icons', 'icon128.png')
 
 let mainWindow = null
 
@@ -45,10 +47,17 @@ function readState() {
 let saved = readState()
 const storage = {
   load: async () => saved,
+  // Temp file then rename: a crash mid-write must not wipe the history and queue.
   save: partial => {
     saved = { ...saved, ...partial }
-    fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true })
-    fs.writeFileSync(STATE_PATH, JSON.stringify(saved))
+    try {
+      fs.mkdirSync(path.dirname(STATE_PATH), { recursive: true })
+      const tmp = `${STATE_PATH}.${process.pid}.tmp`
+      fs.writeFileSync(tmp, JSON.stringify(saved))
+      fs.renameSync(tmp, STATE_PATH)
+    } catch (err) {
+      console.error(`Could not save app-state.json: ${err.message}`)
+    }
   },
 }
 
@@ -74,23 +83,59 @@ async function pickFiles() {
 
 function notify({ title, message, target }) {
   if (!Notification.isSupported()) return
-  const n = new Notification({ title, body: message, icon: path.join(ROOT, 'extension', 'icons', 'icon128.png') })
+  const n = new Notification({ title, body: message, icon: ICON })
   n.on('click', () => {
-    if (!target) return mainWindow?.show()
+    if (!target) return showWindow()
     try {
       files.reveal(target)
     } catch {
-      mainWindow?.show()
+      showWindow()
     }
   })
   n.show()
 }
 
+function showWindow() {
+  if (!mainWindow) return createWindow()
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+/** Downloads are running and the user wants to be asked: true unless they keep Yoinks open. */
+function confirmStop() {
+  const running = controller.view().queue.filter(job => job.phase === 'downloading' || job.phase === 'probing').length
+  if (!running || !store.load().confirmClose) return true
+  const choice = dialog.showMessageBoxSync(mainWindow ?? undefined, {
+    type: 'question',
+    buttons: ['Keep Yoinks open', 'Close and stop'],
+    defaultId: 0,
+    cancelId: 0,
+    title: 'Downloads are running',
+    message: running === 1 ? 'Yoinks is still downloading 1 file.' : `Yoinks is still downloading ${running} files.`,
+    detail: 'If you close it now, the downloads stop. They come back paused next time, and paused ones keep their partial files.',
+  })
+  return choice === 1
+}
+
+const tray = Tray.create({
+  getWindow: () => mainWindow,
+  iconPath: ICON,
+  onShow: showWindow,
+  onCommand: type => controller.command({ type }),
+  onQuit: () => {
+    if (confirmStop()) app.quit()
+  },
+})
+
 const controller = Controller.create({
   backend: createLocalBackend({ pickFolder, pickFiles }),
   storage,
   notify,
-  onState: view => mainWindow?.webContents.send('yoinks:state', view),
+  onState: view => {
+    mainWindow?.webContents.send('yoinks:state', view)
+    tray.update(view)
+  },
   platform: 'desktop',
 })
 
@@ -109,7 +154,7 @@ function createWindow() {
     frame: false,
     show: false,
     titleBarStyle: 'hidden',
-    icon: path.join(ROOT, 'extension', 'icons', 'icon128.png'),
+    icon: ICON,
     webPreferences: {
       preload: path.join(ROOT, 'preload.js'),
       contextIsolation: true,
@@ -140,21 +185,20 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', event => event.preventDefault())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
-  // Closing the window ends the app, and with it any running download: ask first.
+  // With the tray icon on, closing only hides the window. Otherwise closing
+  // ends the app, and with it any running download: ask first.
   mainWindow.on('close', event => {
     if (quitting) return
-    const running = controller.view().queue.filter(job => job.phase === 'downloading' || job.phase === 'probing').length
-    if (!running || !store.load().confirmClose) return
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: 'question',
-      buttons: ['Keep Yoinks open', 'Close and stop'],
-      defaultId: 0,
-      cancelId: 0,
-      title: 'Downloads are running',
-      message: running === 1 ? 'Yoinks is still downloading 1 file.' : `Yoinks is still downloading ${running} files.`,
-      detail: 'If you close it now, the downloads stop. Paused ones keep their partial files.',
-    })
-    if (choice === 0) event.preventDefault()
+    if (tray.active) {
+      event.preventDefault()
+      mainWindow.hide()
+      if (!toldAboutTray && Notification.isSupported()) {
+        toldAboutTray = true
+        new Notification({ title: 'Yoinks is still running', body: 'Downloads keep going. Open Yoinks or quit it from the tray icon.', icon: ICON }).show()
+      }
+      return
+    }
+    if (!confirmStop()) event.preventDefault()
   })
 
   // Setting "Offer links I copy": put a copied link in the link box on return.
@@ -176,6 +220,7 @@ function createWindow() {
 // Set when the app is really quitting (including "restart to update"), so the
 // close question above is only asked for a click on the window's own close.
 let quitting = false
+let toldAboutTray = false
 app.on('before-quit', () => (quitting = true))
 
 // A second copy would run its own queue and overwrite this one's history:
@@ -183,14 +228,10 @@ app.on('before-quit', () => (quitting = true))
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
-  app.on('second-instance', () => {
-    if (!mainWindow) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.show()
-    mainWindow.focus()
-  })
+  app.on('second-instance', showWindow)
   app.whenReady().then(() => {
     createWindow()
+    controller.ready.then(() => tray.update(controller.view()))
     updater.start(() => mainWindow)
     helper.register() // browser extension helper, no Node.js needed
     // Watched channels: look for new uploads a minute after start, then every 30 minutes.

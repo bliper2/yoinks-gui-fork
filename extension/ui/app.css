@@ -545,6 +545,15 @@ body {
 .recent-actions {
   display: flex;
 }
+.recent-search {
+  width: 100%;
+  margin-bottom: 6px;
+}
+.recent-empty {
+  margin: 4px 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
 
 /* ---------- batch ---------- */
 

@@ -62,6 +62,14 @@ Make it executable first (`chmod +x Yoinks-*.AppImage`). On a system without FUS
 
 Choosing the folder from the extension needs `zenity` (GNOME and most desktops) or `kdialog` (KDE). The desktop app has its own dialog. Yoinks uses the bundled ffmpeg; a system `ffmpeg` is the fallback when running from source.
 
+## Linux: no tray icon
+
+GNOME hides tray icons unless the "AppIndicator and KStatusNotifierItem Support" extension is on (Ubuntu has it by default). KDE, Cinnamon, XFCE and Waybar's tray module show it as is. Without a tray, turn off **Keep Yoinks running in the tray** so closing the window quits normally.
+
+## A proxy is set and nothing downloads
+
+Settings, Health check shows the proxy Yoinks uses. If it does not connect, fix the address or clear the **Proxy** field. Only yt-dlp goes through it; Spotify lookups and updates do not.
+
 ## Android: downloads stop when I leave the app
 
 Set **Settings, Apps, Yoinks, Battery** to **Unrestricted**. Some phone makers also need "Autostart" or "Lock in recents" turned on for Yoinks.

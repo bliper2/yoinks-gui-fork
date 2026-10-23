@@ -7,6 +7,7 @@
 // browser helper both use it through core/session.js.
 
 const { spawn, spawnSync } = require('node:child_process')
+const crypto = require('node:crypto')
 const { createWriteStream } = require('node:fs')
 const fs = require('node:fs/promises')
 const os = require('node:os')
@@ -17,6 +18,7 @@ const { pipeline } = require('node:stream/promises')
 const Errors = require('../extension/shared/errors.js')
 const Template = require('../extension/shared/filename-template.js')
 const { pickChoice } = require('../extension/shared/formats.js')
+const { SPONSORBLOCK_CATEGORIES } = require('../extension/shared/settings-schema.js')
 
 const YOINKS_DIR = path.join(os.homedir(), '.yoinks', 'bin')
 const LOCAL_YTDLP = path.join(YOINKS_DIR, process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp')
@@ -192,11 +194,52 @@ async function ensureYtDlp(onStatus, signal, { autoUpdate = true } = {}) {
     throw new YoinksError({ code: 'network', message: `Could not download yt-dlp (HTTP ${response.status}). Try again later.`, retryable: true })
   }
   const tmp = `${LOCAL_YTDLP}.download`
-  await pipeline(Readable.fromWeb(response.body), createWriteStream(tmp), { signal })
+  const hash = crypto.createHash('sha256')
+  const source = Readable.fromWeb(response.body)
+  source.on('data', chunk => hash.update(chunk))
+  try {
+    await pipeline(source, createWriteStream(tmp), { signal })
+    await verifyChecksum(hash.digest('hex'), signal)
+  } catch (err) {
+    await fs.rm(tmp, { force: true })
+    throw err
+  }
   await fs.chmod(tmp, 0o755)
   await fs.rename(tmp, LOCAL_YTDLP)
   await fs.writeFile(UPDATE_STAMP, '')
   return LOCAL_YTDLP
+}
+
+/**
+ * Compare a downloaded yt-dlp with the SHA-256 that the same release
+ * publishes in SHA2-256SUMS. A mismatch, or no checksum for our file, means
+ * the file is not used. (Later updates go through "yt-dlp -U", which checks
+ * the same file itself.)
+ */
+async function verifyChecksum(actual, signal) {
+  const asset = ytDlpAssetName()
+  let sums
+  try {
+    const response = await fetch(`${RELEASE_BASE}/SHA2-256SUMS`, { signal })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    sums = await response.text()
+  } catch (err) {
+    if (signal?.aborted) throw err
+    throw new YoinksError({ code: 'network', message: 'Could not check the yt-dlp download. Check your connection and try again.', retryable: true, detail: err.message })
+  }
+  const expected = checksumFor(sums, asset)
+  if (!expected || expected !== actual) {
+    throw new YoinksError({ code: 'checksum', message: 'The yt-dlp download did not match its published checksum, so Yoinks did not use it. Try again later.', retryable: true, detail: `${asset}: expected ${expected ?? 'none'}, got ${actual}` })
+  }
+}
+
+/** The hash for `asset` in a SHA2-256SUMS file ("<hex>  <name>" lines), or null. */
+function checksumFor(sums, asset) {
+  for (const line of String(sums).split(/\r?\n/)) {
+    const m = /^([0-9a-f]{64})\s+\*?(\S+)$/i.exec(line.trim())
+    if (m && m[2] === asset) return m[1].toLowerCase()
+  }
+  return null
 }
 
 async function updateIsDue() {
@@ -230,6 +273,17 @@ async function updateManaged(signal) {
     throw fromYtdlp(result.stderr || result.stdout, 'yt-dlp could not update itself.')
   }
   return result.stdout
+}
+
+/**
+ * Switch our copy to yt-dlp's nightly build, where site fixes land days
+ * before a stable release. Later weekly updates ("-U") then stay on nightly.
+ */
+async function updateToNightly(signal) {
+  const result = await run(LOCAL_YTDLP, ['--update-to', 'nightly'], { signal, timeout: 180_000 })
+  if (result.code !== 0) throw fromYtdlp(result.stderr || result.stdout, 'yt-dlp could not switch to the nightly build.')
+  await fs.writeFile(UPDATE_STAMP, '')
+  return versionInfo()
 }
 
 /** { version, managed } for whichever yt-dlp ensureYtDlp would use. */
@@ -289,8 +343,11 @@ async function ffmpegInfo() {
 
 // ---------- probe ----------
 
-function cookieArgs(settings) {
-  return settings?.cookiesFromBrowser && settings.cookiesFromBrowser !== 'off' ? ['--cookies-from-browser', settings.cookiesFromBrowser] : []
+// Every yt-dlp call that goes online takes these: browser cookies and the proxy.
+function onlineArgs(settings) {
+  const args = settings?.cookiesFromBrowser && settings.cookiesFromBrowser !== 'off' ? ['--cookies-from-browser', settings.cookiesFromBrowser] : []
+  if (settings?.proxy) args.push('--proxy', settings.proxy)
+  return args
 }
 
 /**
@@ -300,7 +357,7 @@ function cookieArgs(settings) {
  */
 async function probe(ytdlp, url, signal, { playlist = false, settings } = {}) {
   const mode = playlist ? ['--flat-playlist', '--yes-playlist'] : ['--no-playlist']
-  const result = await run(ytdlp, [...UTF8, '-J', ...mode, '--no-warnings', ...cookieArgs(settings), '--', url], { signal })
+  const result = await run(ytdlp, [...UTF8, '-J', ...mode, '--no-warnings', ...onlineArgs(settings), '--', url], { signal })
   if (result.code !== 0) throw fromYtdlp(result.stderr, `yt-dlp exited with code ${result.code}`)
   let info
   try {
@@ -326,7 +383,7 @@ async function searchMusic(ytdlp, query, { limit = 4, signal, settings } = {}) {
   const url = `https://music.youtube.com/search?q=${encodeURIComponent(query)}#songs`
   const result = await run(
     ytdlp,
-    [...UTF8, '--no-warnings', '--skip-download', '--playlist-items', `1-${limit}`, '--print', '%(.{id,title,artist,album,duration,channel,webpage_url})j', ...cookieArgs(settings), '--', url],
+    [...UTF8, '--no-warnings', '--skip-download', '--playlist-items', `1-${limit}`, '--print', '%(.{id,title,artist,album,duration,channel,webpage_url})j', ...onlineArgs(settings), '--', url],
     { signal },
   )
   if (result.code !== 0 && !result.stdout.trim()) throw fromYtdlp(result.stderr, 'YouTube Music search failed.')
@@ -357,7 +414,7 @@ async function searchMusic(ytdlp, query, { limit = 4, signal, settings } = {}) {
 async function searchVideos(ytdlp, query, { limit = 8, signal, settings } = {}) {
   const text = String(query ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200)
   if (!text) throw new YoinksError({ code: 'bad-request', message: 'Type something to search for.' })
-  const result = await run(ytdlp, [...UTF8, '-J', '--flat-playlist', '--no-warnings', ...cookieArgs(settings), '--', `ytsearch${limit}:${text}`], { signal })
+  const result = await run(ytdlp, [...UTF8, '-J', '--flat-playlist', '--no-warnings', ...onlineArgs(settings), '--', `ytsearch${limit}:${text}`], { signal })
   if (result.code !== 0) throw fromYtdlp(result.stderr, 'The search failed.')
   let info
   try {
@@ -565,6 +622,9 @@ function buildArgs({ choice, settings, outDir, playlist = false, music = false, 
   const isAudio = choice.kind === 'audio'
 
   if (clip) args.push('--download-sections', `*${clip.start}-${clip.end ?? 'inf'}`, '--force-keyframes-at-cuts')
+  // A clip's times are the video's own: cutting segments out would shift them.
+  const sponsorCategories = SPONSORBLOCK_CATEGORIES[settings.sponsorBlock]
+  if (sponsorCategories && !clip) args.push('--sponsorblock-remove', sponsorCategories)
   if (settings.embedMetadata || forceTags) args.push('--embed-metadata')
   if (settings.embedThumbnail || forceTags) {
     args.push('--embed-thumbnail', '--convert-thumbnails', 'jpg')
@@ -581,7 +641,7 @@ function buildArgs({ choice, settings, outDir, playlist = false, music = false, 
     // One file per chapter in a folder next to the full file.
     args.push('--split-chapters', '-o', `chapter:${path.join(outDir, '%(title).100B', '%(section_number)03d - %(section_title).100B.%(ext)s')}`)
   }
-  args.push(...cookieArgs(settings), ...siteArgs)
+  args.push(...onlineArgs(settings), ...siteArgs)
 
   let template = Template.toYtdlp(settings.filenameTemplate, { playlist, folder: settings.playlistFolder, numbered: settings.playlistNumbered, folderBy: settings.folderBy })
   if (clip) template = template.replace(/\.%\(ext\)s$/, ` (clip ${clockLabel(clip.start)}-${clip.end === null ? 'end' : clockLabel(clip.end)}).%(ext)s`)
@@ -598,7 +658,7 @@ function clockLabel(seconds) {
 
 const PROGRESS_PREFIX = 'YOINK|'
 const PROGRESS_TEMPLATE = `${PROGRESS_PREFIX}%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s`
-const PROCESSING_LINE = /^\[(Merger|ExtractAudio|EmbedThumbnail|EmbedSubtitle|Metadata|ThumbnailsConvertor|FixupM4a|FixupM3u8|MetadataParser|ModifyChapters|SplitChapters)\]/
+const PROCESSING_LINE = /^\[(Merger|ExtractAudio|EmbedThumbnail|EmbedSubtitle|Metadata|ThumbnailsConvertor|FixupM4a|FixupM3u8|MetadataParser|ModifyChapters|SplitChapters|SponsorBlock)\]/
 
 process.on('exit', () => activeChildren.forEach(child => killTree(child, { sync: true })))
 
@@ -735,6 +795,8 @@ module.exports = {
   ensureYtDlp,
   versionInfo,
   updateNow,
+  updateToNightly,
+  checksumFor,
   findFfmpeg,
   ffmpegInfo,
   probe,

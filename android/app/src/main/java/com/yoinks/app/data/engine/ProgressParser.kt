@@ -13,7 +13,7 @@ class ProgressParser {
 
     private val ITEM = Regex("""\[download] Downloading item (\d+) of (\d+)""")
     private val SPEED = Regex("""at\s+(~?\s*[\d.]+\s*[KMG]?i?B/s)""")
-    private val PROCESSING = Regex("""^\[(Merger|ExtractAudio|EmbedThumbnail|EmbedSubtitle|Metadata|ThumbnailsConvertor|FixupM4a|FixupM3u8|MetadataParser|ModifyChapters|VideoConvertor)]""")
+    private val PROCESSING = Regex("""^\[(Merger|ExtractAudio|EmbedThumbnail|EmbedSubtitle|Metadata|ThumbnailsConvertor|FixupM4a|FixupM3u8|MetadataParser|ModifyChapters|VideoConvertor|SponsorBlock)]""")
 
     /** [percent] is 0–100 or negative when unknown (youtubedl-android's convention). */
     fun update(percent: Float, etaSeconds: Long, line: String): EngineProgress {

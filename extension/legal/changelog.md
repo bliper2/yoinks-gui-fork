@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.0.0
+
+- The queue survives a restart (Windows, Linux, extension). Unfinished downloads come back paused when you open Yoinks again, and failed ones stay in the list so you can retry them. Paused downloads in the extension no longer vanish when the browser puts Yoinks to sleep.
+- SponsorBlock: Settings, yt-dlp, "Cut sponsored parts" removes sponsor segments (or also self-promo, intros and outros) from YouTube videos. All platforms.
+- Proxy setting for videos blocked in your country, like `socks5://127.0.0.1:1080`. All platforms. The health check shows when one is set.
+- Search your recent downloads, and download any of them again with the same quality (Windows, Linux, extension; Android already had "Download again" and now has search too). Yoinks keeps the last 200 downloads instead of 50.
+- Windows and Linux: download progress on the taskbar icon, and an optional tray icon. With "Keep Yoinks running in the tray" on, closing the window keeps downloads going; quit from the tray menu.
+- "Use browser cookies" also works with Chromium, Vivaldi, Opera and Whale.
+- When a site still fails after a normal yt-dlp update, Windows, Linux and the extension now try the nightly build once, like Android does.
+- The yt-dlp that Yoinks downloads on first run is checked against the SHA-256 that yt-dlp publishes, and is not used if it does not match.
+- New messages for a proxy that does not connect and for videos blocked in your country.
+- Fixed: a crash while saving could wipe the list of recent downloads on Windows and Linux.
+- The extension's "helper is not installed" message now says that starting the installed app sets it up.
+- Updated Electron to 44 and the build tools; Android to Kotlin 2.4.21 and Gradle 9.8.2.
+
 ## 2.6.2
 
 - Fixed (Android): downloads failed with an error like "unknown - qh0" in the signed release app. The app's code shrinker had renamed classes that a library looks up by name. Names are no longer changed, so the engine starts and TikTok and other links download again.
