@@ -7,7 +7,13 @@ set -euo pipefail
 
 root="$PWD"
 home="$(mktemp -d)"
-trap 'rm -rf "$home"' EXIT
+# Stop every copy of the app (kill on xvfb-run leaves the app itself running,
+# still writing into $home), then clean up without failing the job over it.
+stop_app() {
+  pkill -f '/opt/Yoinks/yoinks|Yoinks-.*\.AppImage|\.mount_Yoinks' 2>/dev/null || true
+  sleep 2
+}
+trap 'stop_app; rm -rf "$home" 2>/dev/null || true' EXIT
 
 # Start the real app headless in a fresh home that has a Chrome profile folder,
 # wait for it to write its launcher, then run that launcher like a browser would.
@@ -27,6 +33,7 @@ check() {
   HOME="$home" XDG_CONFIG_HOME="$home/.config" node "$root/scripts/smoke-host.js" "$launcher"
   kill "$app" 2>/dev/null || true
   wait "$app" 2>/dev/null || true
+  stop_app
 }
 
 sudo apt-get install -y ./release/Yoinks-*-linux-amd64.deb
