@@ -146,3 +146,20 @@ test('the tray and taskbar summary of the queue', () => {
   assert.equal(Tray.summarize([{ phase: 'downloading', progress: { downloadedBytes: 1 } }]).fraction, null)
   assert.equal(Tray.tooltipOf(Tray.summarize([])), 'Yoinks')
 })
+
+// ---------- 3.0.2: watched channels ----------
+
+test('checking a watched channel builds its yt-dlp call, with cookies and the proxy', () => {
+  const { url, args } = Ytdlp.uploadsArgs('https://www.youtube.com/@someone', { limit: 15, settings: settings({ cookiesFromBrowser: 'firefox', proxy: 'socks5://127.0.0.1:1080' }) })
+  assert.equal(url, 'https://www.youtube.com/@someone/videos')
+  assert.deepEqual(args.slice(-2), ['--', 'https://www.youtube.com/@someone/videos'])
+  assert.ok(args.includes('--flat-playlist'))
+  assert.equal(args[args.indexOf('--playlist-end') + 1], '15')
+  assert.equal(args[args.indexOf('--cookies-from-browser') + 1], 'firefox')
+  assert.equal(args[args.indexOf('--proxy') + 1], 'socks5://127.0.0.1:1080')
+})
+
+test('a watched channel link must be a web link', () => {
+  assert.throws(() => Ytdlp.uploadsArgs('--exec calc', { settings: settings() }), { code: 'bad-request' })
+  assert.deepEqual(Ytdlp.uploadsArgs('https://www.youtube.com/playlist?list=PL1', { settings: settings() }).args.slice(-1), ['https://www.youtube.com/playlist?list=PL1'])
+})

@@ -435,13 +435,19 @@ async function searchVideos(ytdlp, query, { limit = 8, signal, settings } = {}) 
 
 // ---------- watched channels ----------
 
-/** The newest uploads of a channel or playlist link: { title, entries: [{ id, title, url }] }. */
-async function listUploads(ytdlp, rawUrl, { limit = 15, signal, settings } = {}) {
+/** yt-dlp arguments that list the newest `limit` uploads of a channel or playlist link. */
+function uploadsArgs(rawUrl, { limit = 15, settings } = {}) {
   let url = String(rawUrl ?? '')
   if (!/^https?:\/\//.test(url)) throw new YoinksError({ code: 'bad-request', message: 'That is not a link.' })
   // A bare YouTube channel link lists its tabs, not its videos.
   url = url.replace(/^(https?:\/\/(?:www\.|m\.)?youtube\.com\/(?:@[^/?#]+|channel\/[^/?#]+|c\/[^/?#]+|user\/[^/?#]+))\/?(?:[?#].*)?$/, '$1/videos')
-  const result = await run(ytdlp, [...UTF8, '-J', '--flat-playlist', '--no-warnings', '--playlist-end', String(limit), ...cookieArgs(settings), '--', url], { signal })
+  return { url, args: [...UTF8, '-J', '--flat-playlist', '--no-warnings', '--playlist-end', String(limit), ...onlineArgs(settings), '--', url] }
+}
+
+/** The newest uploads of a channel or playlist link: { title, entries: [{ id, title, url }] }. */
+async function listUploads(ytdlp, rawUrl, { limit = 15, signal, settings } = {}) {
+  const { url, args } = uploadsArgs(rawUrl, { limit, settings })
+  const result = await run(ytdlp, args, { signal })
   if (result.code !== 0) throw fromYtdlp(result.stderr, 'Could not read that channel.')
   let info
   try {
@@ -791,6 +797,7 @@ function toNumber(value) {
 module.exports = {
   run,
   listUploads,
+  uploadsArgs,
   YoinksError,
   ensureYtDlp,
   versionInfo,

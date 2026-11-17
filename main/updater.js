@@ -18,6 +18,7 @@ const REPO = { provider: 'github', owner: 'bliper2', repo: 'yoinks-gui-fork' }
 const RELEASES_PAGE = `https://github.com/${REPO.owner}/${REPO.repo}/releases/latest`
 const DOWNLOAD_PREFIX = `https://github.com/${REPO.owner}/${REPO.repo}/releases/download/`
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000
+const STALL_MS = 60_000
 const ICON = path.join(__dirname, '..', 'extension', 'icons', 'icon128.png')
 
 /**
@@ -35,15 +36,26 @@ async function downloadPortable(version, dir) {
   const asset = release.assets?.find(a => a.name === name && String(a.browser_download_url).startsWith(DOWNLOAD_PREFIX))
   if (!asset) throw new Error('The release has no portable file.')
 
-  const response = await fetch(asset.browser_download_url, { headers: { 'user-agent': 'Yoinks-updater' } })
-  if (!response.ok || !response.body) throw new Error(`Download failed (${response.status}).`)
+  // A connection that stops sending would otherwise hang here for good, and
+  // the user would never hear about the update: give up after a quiet minute.
+  const stall = new AbortController()
+  let quiet = null
+  const stillAlive = () => {
+    clearTimeout(quiet)
+    quiet = setTimeout(() => stall.abort(new Error('The download stopped.')), STALL_MS)
+  }
+  stillAlive()
   const part = `${target}.part`
-  const hash = crypto.createHash('sha256')
-  const out = fs.createWriteStream(part)
-  const source = Readable.fromWeb(response.body)
-  source.on('data', chunk => hash.update(chunk))
   try {
-    await pipeline(source, out)
+    const response = await fetch(asset.browser_download_url, { headers: { 'user-agent': 'Yoinks-updater' }, signal: stall.signal })
+    if (!response.ok || !response.body) throw new Error(`Download failed (${response.status}).`)
+    const hash = crypto.createHash('sha256')
+    const source = Readable.fromWeb(response.body)
+    source.on('data', chunk => {
+      stillAlive()
+      hash.update(chunk)
+    })
+    await pipeline(source, fs.createWriteStream(part), { signal: stall.signal })
     const size = fs.statSync(part).size
     if (asset.size && size !== asset.size) throw new Error('The download is incomplete.')
     const expected = /^sha256:([0-9a-f]{64})$/.exec(asset.digest ?? '')?.[1]
@@ -52,6 +64,8 @@ async function downloadPortable(version, dir) {
   } catch (err) {
     fs.rmSync(part, { force: true })
     throw err
+  } finally {
+    clearTimeout(quiet)
   }
   return target
 }

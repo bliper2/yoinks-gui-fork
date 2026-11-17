@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.2
+
+- Fixed (Windows, Linux, extension): watching a channel failed with an error, and watched channels never added new uploads. It also uses your proxy now, like every other download.
+- Fixed (Windows portable): when downloading the new version stalled, Yoinks never said an update was out. It now gives up after a quiet minute and points you to the download page.
+- Updated Electron to 45.
+
 ## 3.0.1
 
 - Fixed (Android): links shared from the Spotify app (spotify.link) did not open and said they were not a Spotify link. Spotify answered the phone with a link to its app instead of the song page; Yoinks now reads the song page either way.

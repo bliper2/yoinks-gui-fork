@@ -46,8 +46,16 @@
   <main>
     <h1>Changelog</h1>
     <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v3.0.2">
+      <h2>3.0.2 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>Fixed (Windows, Linux, extension): watching a channel failed with an error, and watched channels never added new uploads. It also uses your proxy now, like every other download.</li>
+        <li>Fixed (Windows portable): when downloading the new version stalled, Yoinks never said an update was out. It now gives up after a quiet minute and points you to the download page.</li>
+        <li>Updated Electron to 45.</li>
+      </ul>
+    </section>
     <section class="release" id="v3.0.1">
-      <h2>3.0.1 <span class="latest">Latest</span></h2>
+      <h2>3.0.1</h2>
       <ul>
         <li>Fixed (Android): links shared from the Spotify app (spotify.link) did not open and said they were not a Spotify link. Spotify answered the phone with a link to its app instead of the song page; Yoinks now reads the song page either way.</li>
         <li>Android: Mixcloud and Audiomack download as audio by default, and Pinterest, Tumblr, Threads, Bluesky, Kick, Bilibili, VK and LinkedIn are recognized by name. Short links from Pinterest (pin.it), Bilibili (b23.tv), X (t.co) and the Google app (search.app) are followed to the real page.</li>
