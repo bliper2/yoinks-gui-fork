@@ -15,6 +15,7 @@ const files = require('../core/files')
 const updater = require('./updater')
 const helper = require('./helper')
 const Tray = require('./tray')
+const Portable = require('./portable')
 const Ytdlp = require('./ytdlp')
 
 const ROOT = path.join(__dirname, '..')
@@ -233,6 +234,8 @@ if (!app.requestSingleInstanceLock()) {
     createWindow()
     controller.ready.then(() => tray.update(controller.view()))
     updater.start(() => mainWindow)
+    // Portable: shortcuts pinned from the running window point at its temporary folder.
+    Portable.repairShortcuts()
     helper.register() // browser extension helper, no Node.js needed
     // Watched channels: look for new uploads a minute after start, then every 30 minutes.
     setTimeout(() => controller.command({ type: 'watch:run' }), 60_000)

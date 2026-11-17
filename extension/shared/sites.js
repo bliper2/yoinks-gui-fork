@@ -33,9 +33,10 @@
     {
       id: 'spotify',
       name: 'Spotify',
-      host: /^open\.spotify\.com$/,
-      media: /^\/(intl-[\w-]+\/)?(track|album|playlist)\/[A-Za-z0-9]{22}/,
-      playlist: url => /\/(album|playlist)\//.test(url.pathname),
+      // Share links (spotify.link, spotify.app.link) are followed to open.spotify.com first.
+      host: /^open\.spotify\.com$|^spotify\.(app\.)?link$/,
+      media: /^\/(intl-[\w-]+\/)?(track|album|playlist|artist|episode|show)\/[A-Za-z0-9]{22}/,
+      playlist: url => /\/(album|playlist|artist|show)\//.test(url.pathname),
       music: true,
       spotify: true,
     },
@@ -102,6 +103,7 @@
     if (site.id === 'youtube-music' && u.pathname === '/watch') return u.searchParams.has('v')
     if (site.id === 'youtube-music' && u.pathname === '/playlist') return u.searchParams.has('list')
     if (site.id === 'twitch' && u.hostname === 'clips.twitch.tv') return u.pathname.length > 1
+    if (site.id === 'spotify' && u.hostname !== 'open.spotify.com') return u.pathname.length > 1
     if (site.id === 'facebook') {
       if (u.hostname === 'fb.watch') return u.pathname.length > 1
       if (u.pathname.replace(/\/$/, '') === '/watch') return u.searchParams.has('v')

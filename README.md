@@ -143,14 +143,14 @@ Everything is configurable on one settings page: download folder, file name temp
 
 Browsers cannot run yt-dlp, so the extension talks to a small helper that runs the same engine as the desktop app. The browser starts it when needed. The desktop app does not have to be open.
 
-**With the installed Windows or Linux app (no Node.js needed)**
+**With the Windows or Linux app, installed or portable (no Node.js needed)**
 
-1. Install and start Yoinks once. It sets up the helper for Chrome, Edge, Brave, Firefox and Waterfox on its own.
+1. Start Yoinks once. It sets up the helper for Chrome, Edge, Brave, Firefox and Waterfox on its own. The portable app keeps a copy of itself for the helper in `%LOCALAPPDATA%\Yoinks` (on the same drive this takes no extra space).
 2. Open Settings, **Browser extension**. It shows the extension folder, with **Open folder** and **Copy path** buttons.
 3. Open `brave://extensions` (or `chrome://extensions`, `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and pick that folder.
 4. Restart the browser once. A Terms page opens on first install: accept it.
 
-**With the portable app, or the zip from Releases (Node.js 18 or newer)**
+**With the zip from Releases (Node.js 18 or newer)**
 
 1. Unzip it, run `npm install`, then `npm run extension:install`.
 2. Load the `extension/` folder as in steps 3 and 4 above.

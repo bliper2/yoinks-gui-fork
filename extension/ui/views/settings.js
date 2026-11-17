@@ -482,7 +482,9 @@
               ? 'The helper is set up. Nothing else to install.'
               : 'The helper could not be set up. Restart Yoinks, or reinstall it.'
             : info.mode === 'portable'
-              ? 'This portable copy cannot set up the helper. Install Yoinks with the installer for one-step setup.'
+              ? info.ready
+                ? 'The helper is set up. Load the extension from this folder: it stays put when Yoinks updates.'
+                : 'Setting up the helper… The first start of a new version takes a moment. Restart Yoinks if this stays.'
               : 'Running from source: run npm run extension:install once.'
       })
     }

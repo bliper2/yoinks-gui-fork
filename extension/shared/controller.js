@@ -375,6 +375,7 @@
         tracks: message.tracks ?? null,
       })
 
+      if (message.notice) toast('info', `${job.title}: ${message.notice}`)
       if (job.kind === 'spotify') {
         // Retrying after the helper restarted: reuse the picks already made.
         if (job.selections?.length === job.tracks.length) return beginDownload(job)

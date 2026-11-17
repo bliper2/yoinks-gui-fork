@@ -8,8 +8,9 @@
 // Linux: manifest files in each browser's profile folder (host/linux-hosts.js),
 // for the .deb/.rpm install and for the AppImage.
 //
-// The Windows portable exe cannot do this: it unpacks to a temporary folder
-// that is deleted on exit. There the helper stays "npm run extension:install".
+// The Windows portable exe unpacks to a temporary folder that is deleted on
+// exit, so it points the browsers at a lasting copy of itself instead
+// (main/portable.js).
 
 const { app } = require('electron')
 const { execFile } = require('node:child_process')
@@ -17,6 +18,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 const Linux = require('../host/linux-hosts')
+const Portable = require('./portable')
 
 const HOST_NAME = 'com.yoinks.host'
 // Pinned by the "key" in extension/manifest.json and browser_specific_settings.gecko.id.
@@ -48,7 +50,7 @@ function locations() {
     chromeManifest: path.join(dir, `${HOST_NAME}.json`),
     geckoManifest: path.join(dir, `${HOST_NAME}.firefox.json`),
     hostJs: path.join(resources, 'app.asar', 'host', 'host.js'),
-    extensionDir: app.isPackaged ? path.join(resources, 'extension') : path.join(__dirname, '..', 'extension'),
+    extensionDir: !app.isPackaged ? path.join(__dirname, '..', 'extension') : isPortable() ? Portable.locations().extensionDir : path.join(resources, 'extension'),
   }
 }
 
@@ -75,14 +77,18 @@ function registerLinux(where) {
 
 /** Write the launcher and host manifests and point the browsers at them. */
 async function register() {
-  if (mode() !== 'installed') return false
+  const kind = mode()
+  if (kind === 'dev') return false
   const where = locations()
   if (isLinux) return registerLinux(where)
   if (process.platform !== 'win32') return false
+  // Installed: this exe. Portable: the lasting copy, since this one is temporary.
+  const runtime = kind === 'portable' ? await Portable.ensureRuntime() : { exe: process.execPath, hostJs: where.hostJs }
+  if (!runtime) return false
   try {
     fs.mkdirSync(where.dir, { recursive: true })
     // ELECTRON_RUN_AS_NODE makes Yoinks.exe behave like node.exe for this one process.
-    fs.writeFileSync(where.bat, `@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"${process.execPath}" "${where.hostJs}" %*\r\n`)
+    fs.writeFileSync(where.bat, `@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"${runtime.exe}" "${runtime.hostJs}" %*\r\n`)
     const host = { name: HOST_NAME, description: 'Yoinks downloader host', path: where.bat, type: 'stdio' }
     fs.writeFileSync(where.chromeManifest, JSON.stringify({ ...host, allowed_origins: [CHROME_ORIGIN] }, null, 2))
     fs.writeFileSync(where.geckoManifest, JSON.stringify({ ...host, allowed_extensions: [GECKO_ID] }, null, 2))
@@ -101,7 +107,9 @@ async function info() {
   const where = locations()
   const kind = mode()
   let ready = false
-  if (kind === 'installed') {
+  if (kind === 'portable') {
+    ready = Portable.runtimeReady() && fs.existsSync(where.bat) && (await reg(['query', `${CHROMIUM_KEYS[0]}\\${HOST_NAME}`]))
+  } else if (kind === 'installed') {
     ready = isLinux
       ? fs.existsSync(where.bat) && Linux.registered(where.bat)
       : fs.existsSync(where.bat) && fs.existsSync(where.chromeManifest) && (await reg(['query', `${CHROMIUM_KEYS[0]}\\${HOST_NAME}`]))

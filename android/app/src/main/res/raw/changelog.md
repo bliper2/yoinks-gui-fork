@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.0
+
+- Fixed (Windows, Linux, extension): YouTube downloads failing or missing qualities. yt-dlp now needs a JavaScript runtime for YouTube, and Yoinks gives it its own, so there is nothing to install.
+- Fixed (Windows portable): shortcuts pinned to Start or made on the desktop from the running app did not open Yoinks. They now point at the portable file again every time it starts.
+- Windows portable: the browser extension works with it now. Yoinks keeps a copy of itself for the browser helper, and Settings shows an extension folder that stays put across updates.
+- Spotify (Windows, Linux, extension): artist links (their top songs), share links from the Spotify app (spotify.link), and podcast episodes and shows that are also on other podcast apps, saved from the show's public feed with the episode's title and cover. Shows only on Spotify say so.
+- Spotify (Windows, Linux, extension): playlists longer than 100 songs are read to the end when Spotify allows it, and Yoinks tells you when it only shared the first 100.
+
 ## 3.0.2
 
 - Fixed (Windows, Linux, extension): watching a channel failed with an error, and watched channels never added new uploads. It also uses your proxy now, like every other download.

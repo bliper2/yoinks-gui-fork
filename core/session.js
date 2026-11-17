@@ -198,36 +198,63 @@ class Session {
 
     const site = Sites.siteFor(url)
     const playlist = wantPlaylist || Sites.isPlaylistLink(url)
-    await this.withAbort(async signal => {
-      const { ytdlp: bin } = await this.binaries(signal, settings)
-      this.send({ type: 'status', message: playlist ? 'Reading playlist…' : 'Looking up video…' })
-      const { info, infoJsonPath } = await this.retryWithUpdate(settings, () => ytdlp.probe(bin, url, signal, { playlist, settings }))
-      this.track(infoJsonPath)
-      const isPlaylist = info._type === 'playlist'
-      const choices = ytdlp.buildChoices(info, { audioFormat: settings.audioFormat })
-      const entries = isPlaylist ? (info.entries ?? []).slice(0, MAX_ENTRIES).map(entry => ({ title: entry?.title ?? 'Untitled', duration: entry?.duration ?? null })) : null
-      this.probed = { kind: 'media', url, playlist: isPlaylist, infoJsonPath: isPlaylist ? null : infoJsonPath, choices, site, entryCount: entries?.length ?? 0 }
-      this.send({
-        type: 'probed',
-        kind: 'media',
-        title: info.title ?? url,
-        uploader: (info.artist ?? info.uploader ?? info.channel ?? '').replace(/ - Topic$/, '') || null,
-        duration: info.duration ?? null,
-        thumbnail: typeof info.thumbnail === 'string' && info.thumbnail.startsWith('https://') ? info.thumbnail : null,
-        playlistCount: isPlaylist ? (info.entries?.length ?? info.playlist_count ?? null) : null,
-        entries,
-        site: site?.id ?? null,
-        music: Boolean(site?.music),
-        choices,
-        // What "default format" means for this link: music sites default to audio.
-        defaultIndex: ytdlp.pickChoice(choices, site?.music ? 'audio' : settings.defaultFormat),
-      })
+    await this.withAbort(signal => this.probeMedia(signal, { url, playlist, site, settings }))
+  }
+
+  /**
+   * Look a media link up with yt-dlp and offer its formats. `podcast`
+   * (a Spotify episode found in its public feed) puts the episode's own
+   * title, show and cover on the bare audio file and defaults to audio.
+   */
+  async probeMedia(signal, { url, playlist, site, settings, podcast = null }) {
+    const { ytdlp: bin } = await this.binaries(signal, settings)
+    this.send({ type: 'status', message: playlist ? 'Reading playlist…' : 'Looking up video…' })
+    let { info, infoJsonPath } = await this.retryWithUpdate(settings, () => ytdlp.probe(bin, url, signal, { playlist, settings }))
+    this.track(infoJsonPath)
+    if (podcast?.kind === 'episode') {
+      info = {
+        ...info,
+        title: podcast.title,
+        artist: podcast.show,
+        album: podcast.show,
+        uploader: podcast.show,
+        upload_date: podcast.date ? new Date(podcast.date).toISOString().slice(0, 10).replace(/-/g, '') : info.upload_date,
+        ...(podcast.cover ? { thumbnail: podcast.cover, thumbnails: [{ url: podcast.cover, id: 'spotify' }] } : {}),
+      }
+      infoJsonPath = this.track(await ytdlp.writeInfoJson(info))
+    } else if (podcast?.kind === 'show' && !info.title) info = { ...info, title: podcast.title }
+    const isPlaylist = info._type === 'playlist'
+    const music = Boolean(site?.music || podcast)
+    const choices = ytdlp.buildChoices(info, { audioFormat: settings.audioFormat })
+    const entries = isPlaylist ? (info.entries ?? []).slice(0, MAX_ENTRIES).map(entry => ({ title: entry?.title ?? 'Untitled', duration: entry?.duration ?? null })) : null
+    this.probed = { kind: 'media', url, playlist: isPlaylist, infoJsonPath: isPlaylist ? null : infoJsonPath, choices, site: podcast ? null : site, entryCount: entries?.length ?? 0, music, forceTags: podcast?.kind === 'episode' }
+    this.send({
+      type: 'probed',
+      kind: 'media',
+      title: info.title ?? url,
+      uploader: (info.artist ?? info.uploader ?? info.channel ?? '').replace(/ - Topic$/, '') || null,
+      duration: info.duration ?? null,
+      thumbnail: typeof info.thumbnail === 'string' && info.thumbnail.startsWith('https://') ? info.thumbnail : null,
+      playlistCount: isPlaylist ? (info.entries?.length ?? info.playlist_count ?? null) : null,
+      entries,
+      site: podcast ? 'spotify' : (site?.id ?? null),
+      music,
+      choices,
+      // What "default format" means for this link: music sites and podcasts default to audio.
+      defaultIndex: ytdlp.pickChoice(choices, music ? 'audio' : settings.defaultFormat),
     })
   }
 
-  async probeSpotify(url, settings) {
+  async probeSpotify(rawUrl, settings) {
     await this.withAbort(async signal => {
       this.send({ type: 'status', message: 'Reading Spotify…' })
+      const url = await spotify.resolveShareLink(rawUrl, signal)
+      const type = spotify.parseUrl(url)?.type
+      if (type === 'episode' || type === 'show') {
+        this.send({ type: 'status', message: 'Finding the podcast’s public feed…' })
+        const podcast = await spotify.podcastSource(url, signal)
+        return this.probeMedia(signal, { url: podcast.url, playlist: podcast.kind === 'show', site: null, settings, podcast })
+      }
       const entity = await spotify.lookup(url, signal)
       const { ytdlp: bin } = await this.binaries(signal, settings)
       this.send({ type: 'status', message: entity.tracks.length === 1 ? 'Finding it on YouTube Music…' : `Finding songs on YouTube Music (0/${entity.tracks.length})…` })
@@ -244,6 +271,7 @@ class Session {
         uploader: entity.artists.join(', ') || null,
         spotifyType: entity.type,
         thumbnail: entity.cover,
+        notice: entity.notice ?? null,
         tracks: entity.tracks.map((track, i) => ({
           title: track.title,
           artists: track.artists,
@@ -270,7 +298,8 @@ class Session {
       outDir,
       playlist: probed.playlist,
       items,
-      music: Boolean(probed.site?.music),
+      music: Boolean(probed.music ?? probed.site?.music),
+      forceTags: Boolean(probed.forceTags),
       clip,
       siteArgs: probed.site?.extraArgs ?? [],
     })
@@ -313,7 +342,8 @@ class Session {
         const track = entity.tracks[i]
         this.send({ type: 'item', item: { index: n + 1, count: wanted.length, title: track.title } })
         try {
-          const details = entity.type === 'playlist' ? await spotify.trackDetails(track.id, signal) : { cover: entity.cover, year: entity.year }
+          // Playlist and artist songs each come from their own album, with its own cover.
+          const details = entity.type === 'playlist' || entity.type === 'artist' ? await spotify.trackDetails(track.id, signal) : { cover: entity.cover, year: entity.year }
           const { info, infoJsonPath } = await ytdlp.probe(bins.ytdlp, matches[i][pick].url, signal, { settings })
           fs.rmSync(infoJsonPath, { force: true })
           const patched = spotify.applyMetadata(info, { track, entity, index: i, cover: details.cover ?? entity.cover, year: details.year ?? entity.year })

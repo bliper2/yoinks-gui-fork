@@ -86,11 +86,43 @@ function killTree(child, { sync = false } = {}) {
   try { child.kill('SIGTERM') } catch { /* already gone */ }
 }
 
+// ---------- JavaScript runtime for YouTube ----------
+// yt-dlp needs a JavaScript runtime to solve YouTube's challenges; without
+// one, formats go missing and downloads fail more and more. Yoinks is one:
+// Electron (and the browser helper's node.exe) runs as plain Node with
+// ELECTRON_RUN_AS_NODE, which every child we start gets (spawnKillable).
+// Only yt-dlp 2025.11 and newer know --js-runtimes; an older system copy
+// would refuse to start with it.
+const JS_RUNTIME_SINCE = '2025.11'
+const jsRuntimeOk = new Map() // yt-dlp command -> knows --js-runtimes
+
+async function detectJsRuntime(bin) {
+  if (jsRuntimeOk.has(bin)) return jsRuntimeOk.get(bin)
+  let ok = false
+  try {
+    const { code, stdout } = await run(bin, ['--version'], { timeout: 10_000 })
+    // yt-dlp versions are dates (2026.10.26, nightly 2026.11.10.232800): compare them as text.
+    const version = stdout.trim()
+    ok = code === 0 && /^\d{4}\.\d{2}\.\d{2}/.test(version) && version >= JS_RUNTIME_SINCE
+  } catch {
+    // keep false
+  }
+  jsRuntimeOk.set(bin, ok)
+  return ok
+}
+
+/** The arguments that hand our own Node to `cmd` (yt-dlp), or none. */
+function jsRuntimeArgs(cmd) {
+  return jsRuntimeOk.get(cmd) ? ['--js-runtimes', `node:${process.execPath}`] : []
+}
+
 /** spawn(), but aborting `signal` stops the whole process tree (killTree). */
 function spawnKillable(cmd, args, { signal, ...options } = {}) {
   signal?.throwIfAborted()
-  const child = spawn(cmd, args, {
+  const child = spawn(cmd, [...jsRuntimeArgs(cmd), ...args], {
     ...options,
+    // Lets yt-dlp run Yoinks.exe as Node (see jsRuntimeArgs). Harmless for ffmpeg.
+    env: { ...process.env, ...options.env, ELECTRON_RUN_AS_NODE: '1' },
     windowsHide: true,
     // A new process group so cancel reaches ffmpeg, not only yt-dlp.
     detached: process.platform !== 'win32',
@@ -174,7 +206,13 @@ async function commandWorks(cmd, args) {
  * (self-updated weekly when `autoUpdate`), else download the standalone
  * binary from GitHub releases.
  */
-async function ensureYtDlp(onStatus, signal, { autoUpdate = true } = {}) {
+async function ensureYtDlp(onStatus, signal, opts = {}) {
+  const bin = await findYtDlp(onStatus, signal, opts)
+  await detectJsRuntime(bin)
+  return bin
+}
+
+async function findYtDlp(onStatus, signal, { autoUpdate = true } = {}) {
   if (await commandWorks('yt-dlp', ['--version'])) return 'yt-dlp'
 
   if (await commandWorks(LOCAL_YTDLP, ['--version'])) {
@@ -258,6 +296,7 @@ async function retrySoon() {
 }
 
 async function updateManaged(signal) {
+  jsRuntimeOk.delete(LOCAL_YTDLP) // a new version: look again
   // Stamp first so parallel runs don't all try to replace the exe.
   await fs.mkdir(YOINKS_DIR, { recursive: true })
   await fs.writeFile(UPDATE_STAMP, '')
@@ -280,6 +319,7 @@ async function updateManaged(signal) {
  * before a stable release. Later weekly updates ("-U") then stay on nightly.
  */
 async function updateToNightly(signal) {
+  jsRuntimeOk.delete(LOCAL_YTDLP)
   const result = await run(LOCAL_YTDLP, ['--update-to', 'nightly'], { signal, timeout: 180_000 })
   if (result.code !== 0) throw fromYtdlp(result.stderr || result.stdout, 'yt-dlp could not switch to the nightly build.')
   await fs.writeFile(UPDATE_STAMP, '')
@@ -804,6 +844,8 @@ module.exports = {
   updateNow,
   updateToNightly,
   checksumFor,
+  detectJsRuntime,
+  jsRuntimeArgs,
   findFfmpeg,
   ffmpegInfo,
   probe,

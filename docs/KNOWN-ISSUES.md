@@ -30,6 +30,14 @@ They need you to be signed in: use **Use browser cookies** (desktop, extension) 
 
 Yoinks never downloads from Spotify. It finds the same song on YouTube Music. A brand-new or very obscure song may not be there yet; pick another result from the list, or skip it.
 
+## Spotify playlist stops at 100 songs
+
+Spotify's public page lists the first 100 songs. Yoinks asks Spotify for the rest, and Spotify sometimes says no (its own editorial playlists, or when it is busy). Yoinks tells you when that happens: try again later.
+
+## Spotify podcast "is only on Spotify"
+
+Yoinks saves podcast episodes from the show's own public feed, the one other podcast apps use. Shows that are only on Spotify have no such feed, and their audio is protected, so Yoinks cannot save them. Audiobooks cannot be saved either.
+
 ## SmartScreen warns when I run the Windows app
 
 The builds are not code-signed yet. Click **More info**, then **Run anyway**, after checking you downloaded the file from this repository's Releases page.
@@ -37,7 +45,8 @@ The builds are not code-signed yet. Click **More info**, then **Run anyway**, af
 ## The browser extension says the helper is not installed
 
 - **Installed Windows app:** start Yoinks once, restart the browser, and check Settings, **Browser extension**. It should say the helper is set up.
-- **Portable app or running from source:** the helper needs Node.js: run `npm run extension:install` in the Yoinks folder once.
+- **Portable app:** start it once, wait until Settings, **Browser extension** says the helper is set up (the first start of a new version takes a moment), then restart the browser. Load the extension from the folder shown there, not from the app's temporary folder.
+- **Running from source:** the helper needs Node.js: run `npm run extension:install` in the Yoinks folder once.
 - If you moved the folder, run it again.
 
 ## The extension works in Brave or Chrome but not in Firefox or Waterfox
