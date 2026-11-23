@@ -4,7 +4,6 @@
     <linearGradient id="cyan" x2=".36" y2="1"><stop stop-color="#00eff6"/><stop offset="1" stop-color="#00cde5"/></linearGradient>
     <linearGradient id="arrow" x2=".8" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#e5e8f2"/></linearGradient>
   </defs>
-  <rect x="148" y="301" width="1186" height="274" rx="32" fill="#070810"/>
   <g transform="translate(176 324)">
     <path fill="url(#violet)" d="M0 0H87L186 101 145 148Z"/>
     <path fill="url(#cyan)" d="M318 0H233L132 101 173 148Z"/>

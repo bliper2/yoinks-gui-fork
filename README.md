@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/brand/yoinks-wordmark.png" width="300" alt="Yoinks logo"></p>
+<p align="center"><img src="docs/brand/yoinks-logo.svg" width="300" alt="Yoinks logo"></p>
 
 <h1 align="center">Yoinks</h1>
 
