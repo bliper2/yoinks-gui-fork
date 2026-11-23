@@ -34,7 +34,6 @@
     .caret svg { width: 10px; height: 10px; fill: currentColor; }
     .glyph { position: relative; width: 20px; height: 20px; display: inline-grid; place-items: center; flex: none; }
     .glyph svg { position: absolute; inset: 0; width: 20px; height: 20px; }
-    .logo rect { fill: url(#g); }
     .ring-track { fill: none; stroke: rgba(127,127,127,.35); stroke-width: 2.5; }
     .ring-fill { fill: none; stroke: url(#g); stroke-width: 2.5; stroke-linecap: round;
       transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset .3s ease; }
@@ -74,7 +73,6 @@
       color: #0a0d13; font: 700 14px/1 'Segoe UI', system-ui, sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
     :host([data-variant=floating]) .ring-track { stroke: rgba(10,13,19,.25); }
     :host([data-variant=floating]) .ring-fill { stroke: #0a0d13; }
-    :host([data-variant=floating]) .logo rect { fill: #0a0d13; }
 
     /* menu */
     /* fixed + placed by placeMenu(): sites clip or scroll their button rows */
@@ -123,14 +121,13 @@
     ])
   }
 
-  // The Yoinks mark (docs/logo.svg): a Y that becomes an arrow into a tray.
+  // Inline so the button also works on pages that restrict external images.
   function logo() {
-    return svg('svg', { viewBox: '0 0 256 256', class: 'logo', 'aria-hidden': 'true' }, [
-      gradientDefs(),
-      svg('rect', { x: 8, y: 8, width: 240, height: 240, rx: 60 }),
-      ...['M76 58 L128 112 L180 58', 'M128 112 V172', 'M100 146 L128 174 L156 146', 'M68 170 V190 Q68 204 82 204 H174 Q188 204 188 190 V170'].map(d =>
-        svg('path', { d, fill: 'none', stroke: '#fff', 'stroke-width': 24, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }),
-      ),
+    return svg('svg', { viewBox: '-20 -65 358 358', 'aria-hidden': 'true' }, [
+      svg('rect', { x: -20, y: -65, width: 358, height: 358, rx: 82, fill: '#070810' }),
+      svg('path', { d: 'M0 0H87L186 101 145 148Z', fill: '#8921ff' }),
+      svg('path', { d: 'M318 0H233L132 101 173 148Z', fill: '#00e7f2' }),
+      svg('path', { d: 'M133 100 159 74H186V153H233L159 228 85 153H133Z', fill: '#f6f7fb' }),
     ])
   }
 

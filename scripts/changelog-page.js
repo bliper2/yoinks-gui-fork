@@ -43,9 +43,8 @@ ${items.map(item => `        <li>${inline(item)}</li>`).join('\n')}
   a { color: inherit; }
   .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px 60px; }
   header { padding: 18px 0; display: flex; align-items: center; gap: 12px; }
-  header img { width: 36px; height: 36px; }
-  header strong { font-size: 20px; }
-  header nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  header img { width: 112px; height: auto; display: block; }
+  header nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 18px; font-size: 14px; color: var(--muted); }
   header nav a { text-decoration: none; }
   header nav a:hover { color: var(--text); }
   h1 { font-size: clamp(28px, 5vw, 40px); margin: 24px 0 6px; letter-spacing: -.02em; }
@@ -62,8 +61,7 @@ ${items.map(item => `        <li>${inline(item)}</li>`).join('\n')}
 <body>
 <div class="wrap">
   <header>
-    <img src="logo.svg" alt="">
-    <strong>Yoinks</strong>
+    <img src="brand/yoinks-wordmark.png" alt="Yoinks">
     <nav>
       <a href="./">Home</a>
       <a href="https://github.com/bliper2/yoinks-gui-fork/releases/latest">Download</a>

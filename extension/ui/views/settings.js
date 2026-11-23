@@ -377,6 +377,39 @@
       importInput,
     )
 
+    const releasePage = 'https://github.com/bliper2/yoinks-gui-fork/releases/latest'
+    const updateStatus = h('p', { class: 'help', role: 'status' })
+    const viewRelease = button({ text: 'View release', icon: 'external', variant: 'secondary', hidden: true, onClick: () => bridge.openExternal(releasePage) })
+    const checkUpdate = button({ text: 'Check for updates', icon: 'retry', variant: 'secondary', onClick: async () => {
+      if (checkUpdate.disabled) return
+      checkUpdate.disabled = true
+      viewRelease.hidden = true
+      updateStatus.textContent = 'Checking GitHub Releases…'
+      try {
+        const response = await fetch('https://api.github.com/repos/bliper2/yoinks-gui-fork/releases/latest', {
+          cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(15000),
+        })
+        if (!response.ok) throw new Error('Release check failed')
+        const { tag_name: tag } = await response.json()
+        if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw new Error('Unexpected release tag')
+        const latest = tag.slice(1)
+        const parts = latest.split('.').map(Number)
+        const installed = bridge.version.split('.').map(Number)
+        const changed = parts.findIndex((part, i) => part !== installed[i])
+        const newer = changed >= 0 && parts[changed] > installed[changed]
+        updateStatus.textContent = newer ? 'Yoinks ' + latest + ' is available.' : 'Yoinks ' + bridge.version + ' is up to date.'
+        viewRelease.hidden = !newer
+      } catch {
+        updateStatus.textContent = 'Could not check for updates. Try again or open the release page.'
+        viewRelease.hidden = false
+      } finally {
+        checkUpdate.disabled = false
+      }
+    } })
+    const appUpdateRow = h('div', { class: 'setting setting-wide' },
+      h('div', { class: 'setting-text' }, h('span', { class: 'label', text: 'Yoinks updates' }), updateStatus),
+      h('div', { class: 'row wrap' }, checkUpdate, viewRelease))
+
     const legalRow = h(
       'div',
       { class: 'button-grid' },
@@ -522,7 +555,7 @@
       extensionCard,
       h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-keys' }, h('h2', { id: 'sec-keys' }, icon('settings', { size: 16 }), 'Keyboard'), shortcutRows),
       h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-data' }, h('h2', { id: 'sec-data' }, icon('file', { size: 16 }), 'Your data'), dataRow),
-      h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-about' }, h('h2', { id: 'sec-about' }, icon('info', { size: 16 }), 'About'), h('p', { class: 'help', text: `Yoinks ${bridge.version ?? ''} · No ads, no tracking, no accounts.` }), legalRow),
+      h('section', { class: 'card settings-section', 'aria-labelledby': 'sec-about' }, h('h2', { id: 'sec-about' }, icon('info', { size: 16 }), 'About'), h('p', { class: 'help', text: `Yoinks ${bridge.version ?? ''} · No ads, no tracking, no accounts.` }), appUpdateRow, legalRow),
     )
 
     let askedVersion = false

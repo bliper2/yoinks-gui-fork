@@ -51,7 +51,7 @@
   const header = h(
     'header',
     { class: 'app-header' },
-    h('div', { class: 'brand' }, h('img', { src: 'icons/icon32.png', alt: '', width: 18, height: 18 }), h('span', { text: 'yoinks' })),
+    h('div', { class: 'brand' }, h('img', { src: 'icons/wordmark.png', alt: 'Yoinks', width: 100, height: 23 })),
     nav,
     windowControls,
   )

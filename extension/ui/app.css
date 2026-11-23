@@ -164,8 +164,8 @@ body {
   color: var(--text);
 }
 [data-mode='desktop'] .brand img {
-  width: 24px;
-  height: 24px;
+  width: 112px;
+  height: auto;
 }
 [data-mode='desktop'] .app-main {
   padding: clamp(16px, 3.4vw, 42px);

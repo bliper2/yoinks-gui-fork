@@ -20,13 +20,12 @@
   a { color: inherit; }
   .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
   header { padding: 18px 0; display: flex; align-items: center; gap: 12px; }
-  header img { width: 36px; height: 36px; }
-  header strong { font-size: 20px; }
-  header nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  header img { width: 112px; height: auto; display: block; }
+  header nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 18px; font-size: 14px; color: var(--muted); }
   header nav a { text-decoration: none; }
   header nav a:hover { color: var(--text); }
   .hero { text-align: center; padding: 48px 0 28px; }
-  .hero img.logo { width: 96px; height: 96px; }
+  .hero img.logo { width: min(340px, 85%); height: auto; }
   h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.1; margin: 16px 0 12px; letter-spacing: -.02em; }
   .hero p { max-width: 640px; margin: 0 auto; color: var(--muted); font-size: 18px; }
   .buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 28px 0 8px; }
@@ -50,8 +49,7 @@
 <body>
 <div class="wrap">
   <header>
-    <img src="logo.svg" alt="">
-    <strong>Yoinks</strong>
+    <img src="brand/yoinks-wordmark.png" alt="Yoinks">
     <nav>
       <a href="#features">Features</a>
       <a href="#screens">Screenshots</a>
@@ -62,7 +60,7 @@
   </header>
 
   <div class="hero">
-    <img class="logo" src="logo.svg" alt="Yoinks logo">
+    <img class="logo" src="brand/yoinks-wordmark.png" alt="Yoinks logo">
     <h1>Save videos and music from almost anywhere</h1>
     <p>YouTube, TikTok, Instagram, SoundCloud, X and over 1,800 other sites, plus Spotify links. A Windows and Linux app, a browser extension and an Android app. Free, no ads, no tracking, no accounts.</p>
     <div class="buttons">

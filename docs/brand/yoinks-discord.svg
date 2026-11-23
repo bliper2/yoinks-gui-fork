@@ -1,15 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Yoinks">
+  <rect width="256" height="256" fill="#04050b"/>
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8b6bff"/>
-      <stop offset="1" stop-color="#22d3ee"/>
-    </linearGradient>
+    <linearGradient id="violet" x2=".85" y2="1"><stop stop-color="#9628ff"/><stop offset="1" stop-color="#6500f5"/></linearGradient>
+    <linearGradient id="cyan" x2=".36" y2="1"><stop stop-color="#00eff6"/><stop offset="1" stop-color="#00cde5"/></linearGradient>
+    <linearGradient id="arrow" x2=".8" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#e5e8f2"/></linearGradient>
   </defs>
-  <rect width="256" height="256" fill="url(#g)"/>
-  <g transform="translate(128 131) scale(0.78) translate(-128 -131)" fill="none" stroke="#fff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M76 58 L128 112 L180 58"/>
-    <path d="M128 112 V172"/>
-    <path d="M100 146 L128 174 L156 146"/>
-    <path d="M68 170 V190 Q68 204 82 204 H174 Q188 204 188 190 V170"/>
+  <defs>
+    <linearGradient id="tile" x2=".85" y2="1"><stop stop-color="#241038"/><stop offset=".26" stop-color="#0b0c16"/><stop offset=".72" stop-color="#04070d"/><stop offset="1" stop-color="#03232b"/></linearGradient>
+    <linearGradient id="rim" x2="1" y2=".9"><stop stop-color="#d36aff"/><stop offset=".23" stop-color="#262137"/><stop offset=".58" stop-color="#080a11"/><stop offset=".83" stop-color="#10252c"/><stop offset="1" stop-color="#00edff"/></linearGradient>
+  </defs>
+  <rect x="2" y="2" width="252" height="252" rx="63" fill="url(#tile)" stroke="url(#rim)" stroke-width="4"/>
+  <g transform="translate(38 66) scale(.566)">
+    <path fill="url(#violet)" d="M0 0H87L186 101 145 148Z"/>
+    <path fill="url(#cyan)" d="M318 0H233L132 101 173 148Z"/>
+    <path fill="url(#arrow)" d="M133 100 159 74H186V153H233L159 228 85 153H133Z"/>
   </g>
+
 </svg>

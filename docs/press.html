@@ -14,9 +14,8 @@
   a { color: inherit; }
   .wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; }
   header { padding: 18px 0; display: flex; align-items: center; gap: 12px; }
-  header img { width: 36px; height: 36px; }
-  header strong { font-size: 20px; }
-  header nav { margin-left: auto; display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  header img { width: 112px; height: auto; display: block; }
+  header nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 18px; font-size: 14px; color: var(--muted); }
   header nav a { text-decoration: none; }
   header nav a:hover { color: var(--text); }
   h1 { font-size: clamp(28px, 5vw, 40px); margin: 24px 0 6px; letter-spacing: -.02em; }
@@ -43,8 +42,7 @@
 <body>
 <div class="wrap">
   <header>
-    <img src="logo.svg" alt="">
-    <strong>Yoinks</strong>
+    <img src="brand/yoinks-wordmark.png" alt="Yoinks">
     <nav>
       <a href="./">Home</a>
       <a href="changelog.html">Changelog</a>
@@ -99,6 +97,7 @@
     <h2>Logos</h2>
     <div class="files">
       <a href="brand/yoinks-icon-512.png" download><img src="brand/yoinks-icon-512.png" alt="Yoinks icon">Icon, PNG 512 px</a>
+      <a href="brand/yoinks-wordmark.png" download><img src="brand/yoinks-wordmark.png" alt="Yoinks wordmark">Wordmark, PNG</a>
       <a href="brand/yoinks-logo.svg" download><img src="brand/yoinks-logo.svg" alt="Yoinks logo">Logo, SVG</a>
       <a href="brand/yoinks-discord-1024.png" download><img src="brand/yoinks-discord-1024.png" alt="Yoinks on a dark square">Square, PNG 1024 px</a>
     </div>

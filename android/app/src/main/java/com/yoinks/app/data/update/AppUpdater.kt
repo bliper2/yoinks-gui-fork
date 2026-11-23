@@ -50,17 +50,20 @@ class AppUpdater @Inject constructor(
 
     private val dir get() = File(context.cacheDir, "updates")
 
-    /** The newer release for this phone, or null (up to date, offline, no APK for it). */
+    class MissingApk : IOException()
+
+    /** The newer release for this phone, or null when the installed version is current. */
     suspend fun check(): AppUpdate? = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(LATEST_RELEASE).header("Accept", "application/vnd.github+json").build()
         val release = http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return@withContext null
+            if (!response.isSuccessful) throw IOException("GitHub returned HTTP ${response.code}")
             json.decodeFromString<Release>(response.body.string())
         }
+        if (UpdateRules.parse(release.tag) == null) throw IOException("Invalid release version")
         if (release.draft || release.prerelease || !UpdateRules.isNewer(release.tag, BuildConfig.VERSION_NAME)) return@withContext null
-        val name = UpdateRules.pickApk(release.assets.map { it.name }, Build.SUPPORTED_ABIS.toList()) ?: return@withContext null
+        val name = UpdateRules.pickApk(release.assets.map { it.name }, Build.SUPPORTED_ABIS.toList()) ?: throw MissingApk()
         val asset = release.assets.first { it.name == name }
-        if (!asset.url.startsWith(DOWNLOAD_PREFIX)) return@withContext null
+        if (!asset.url.startsWith(DOWNLOAD_PREFIX)) throw IOException("Invalid release asset")
         AppUpdate(release.tag.removePrefix("v"), asset.name, asset.url, asset.size, release.page)
     }
 

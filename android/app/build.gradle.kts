@@ -26,8 +26,8 @@ android {
         targetSdk = 37
         // Same version as the desktop app: one GitHub release (tag v<versionName>)
         // carries both, and the in-app updater compares against it.
-        versionCode = 320
-        versionName = "3.2.0"
+        versionCode = 330
+        versionName = "3.3.0"
     }
 
     signingConfigs {

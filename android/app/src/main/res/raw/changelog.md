@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.3.0
+
+- Check for Yoinks updates from Settings → About on Windows, Linux, Android, and in the browser extension. Desktop and browser users can open the release page. On Android, download the signed update and open the system installer.
+- The new violet and cyan Yoinks logo appears in desktop and browser toolbars, launchers, notifications, installers, and the press kit. The README now includes the new wordmark and update instructions for each platform.
+
 ## 3.2.0
 
 - Windows and Linux: the wider download view puts the queue beside the link field and history below. Narrow windows switch to one column.

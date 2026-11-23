@@ -1,15 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="148 301 1186 274" role="img" aria-label="Yoinks">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8b6bff"/>
-      <stop offset="1" stop-color="#22d3ee"/>
-    </linearGradient>
+    <linearGradient id="violet" x2=".85" y2="1"><stop stop-color="#9628ff"/><stop offset="1" stop-color="#6500f5"/></linearGradient>
+    <linearGradient id="cyan" x2=".36" y2="1"><stop stop-color="#00eff6"/><stop offset="1" stop-color="#00cde5"/></linearGradient>
+    <linearGradient id="arrow" x2=".8" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#e5e8f2"/></linearGradient>
   </defs>
-  <rect x="8" y="8" width="240" height="240" rx="60" fill="url(#g)"/>
-  <g fill="none" stroke="#fff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M76 58 L128 112 L180 58"/>
-    <path d="M128 112 V172"/>
-    <path d="M100 146 L128 174 L156 146"/>
-    <path d="M68 170 V190 Q68 204 82 204 H174 Q188 204 188 190 V170"/>
+  <rect x="148" y="301" width="1186" height="274" rx="32" fill="#070810"/>
+  <g transform="translate(176 324)">
+    <path fill="url(#violet)" d="M0 0H87L186 101 145 148Z"/>
+    <path fill="url(#cyan)" d="M318 0H233L132 101 173 148Z"/>
+    <path fill="url(#arrow)" d="M133 100 159 74H186V153H233L159 228 85 153H133Z"/>
+  </g>
+  <g fill="url(#arrow)" fill-rule="evenodd">
+    <path d="M510 364H553L592 409 632 364H674L566 489H524L571 434Z"/>
+    <path d="M690 364H775Q781 364 785 370L799 386Q802 390 802 396V455Q802 460 798 465L781 485Q778 489 773 489H687Q681 489 677 484L661 466Q657 462 657 455V403ZM699 391 690 401V449L699 459H760L769 449V401L760 391Z"/>
+    <path d="M820 364H853V489H820Z"/>
+    <path d="M872 364H895L982 439V364H1014V489H990L905 415V489H872Z"/>
+    <path d="M1034 364H1067V417L1128 364H1172L1108 423 1174 489H1129L1067 434V489H1034Z"/>
+    <path d="M1198 364H1305L1285 391H1208L1200 401 1209 411H1278Q1284 411 1288 417L1301 438Q1308 450 1300 461L1281 485Q1278 489 1271 489H1196L1173 474 1181 459H1260L1268 449 1259 439H1198Q1189 439 1182 432L1171 418Q1162 407 1170 393L1186 372Q1191 364 1198 364Z"/>
   </g>
 </svg>

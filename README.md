@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/brand/yoinks-icon-512.png" width="96" alt="Yoinks logo"></p>
+<p align="center"><img src="docs/brand/yoinks-wordmark.png" width="300" alt="Yoinks logo"></p>
 
 <h1 align="center">Yoinks</h1>
 
@@ -48,6 +48,14 @@ scoop install https://raw.githubusercontent.com/bliper2/yoinks-gui-fork/main/pac
 ```
 
 What changed in each version is in [CHANGELOG.md](CHANGELOG.md). The apps also show it once after an update.
+
+## Check for updates
+
+Open **Settings → About → Check for updates** on Windows, Linux, Android, or in the browser extension. The button checks your installed Yoinks version against the latest stable GitHub release.
+
+- **Windows and Linux:** If an update is available, select **View release** to get the installer, portable executable, AppImage, or package for your installation. The installed Windows app and Linux AppImage also check automatically.
+- **Android:** Tap **Update** to download the signed APK for your phone, then **Install** to open the Android installer.
+- **Browser extension:** Select **View release**, then follow the [extension installation steps](#browser-extension) for your browser.
 
 ## What it does
 
@@ -157,7 +165,7 @@ Browsers cannot run yt-dlp, so the extension talks to a small helper that runs t
 
 **Firefox and Waterfox:** open `Yoinks-extension-<version>.xpi` with Waterfox and click **Add**. Release Firefox only installs Mozilla-signed add-ons, so use `about:debugging`, **Load Temporary Add-on** and pick `extension/manifest.json`, or Firefox Developer Edition or Nightly with `xpinstall.signatures.required` set to `false`. Snap and Flatpak browsers cannot use the helper.
 
-Unpacked extensions do not update themselves. To update, download the new zip (or `.xpi`) and click reload on the extension card.
+For an unpacked extension, replace the files in the folder you originally loaded, then click **Reload** on its extension card. If you loaded the folder bundled with the desktop app, update the desktop app first. For an `.xpi` installation, install the newer `.xpi` using the same method as before.
 
 ## Android app
 

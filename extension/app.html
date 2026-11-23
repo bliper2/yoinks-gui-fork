@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!-- Also the desktop app's page (loaded from disk), so it carries its own CSP.
      Thumbnails come from the video sites over https. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https://api.github.com/repos/bliper2/yoinks-gui-fork/releases/latest; object-src 'none'; base-uri 'none'" />
 <title>Yoinks</title>
 <link rel="stylesheet" href="ui/theme.css" />
 <link rel="stylesheet" href="ui/components.css" />

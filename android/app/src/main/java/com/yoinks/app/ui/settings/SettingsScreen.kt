@@ -103,6 +103,7 @@ class SettingsCallbacks(
     val openLegal: (LegalPage) -> Unit,
     val runHealth: () -> Unit = {},
     val copyHealth: () -> Unit = {},
+    val checkAppUpdate: () -> Unit = {},
 )
 
 enum class LegalPage { ABOUT, TERMS, PRIVACY }
@@ -114,10 +115,15 @@ data class SettingsUi(
     val hasCookies: Boolean = false,
     val notificationsAllowed: Boolean = true,
     val health: HealthUi = HealthUi(),
+    val checkingAppUpdate: Boolean = false,
+    val appUpdateMessage: String = "",
 )
 
 @Composable
 fun SettingsRoute(openLegal: (LegalPage) -> Unit, onMessage: (String) -> Unit, vm: SettingsViewModel = hiltViewModel()) {
+    val updates: com.yoinks.app.ui.update.UpdateViewModel = hiltViewModel()
+    val checkingUpdate by updates.checking.collectAsState()
+    val updateMessage by updates.checkMessage.collectAsState()
     val settings by vm.settings.collectAsState()
     val errors by vm.errors.collectAsState()
     val ytdlp by vm.ytdlp.collectAsState()
@@ -143,12 +149,13 @@ fun SettingsRoute(openLegal: (LegalPage) -> Unit, onMessage: (String) -> Unit, v
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { notificationsAllowed = it }
 
     SettingsScreen(
-        ui = SettingsUi(settings, errors, ytdlp, hasCookies, notificationsAllowed, health),
+        ui = SettingsUi(settings, errors, ytdlp, hasCookies, notificationsAllowed, health, checkingUpdate, updateMessage),
         callbacks = SettingsCallbacks(
             set = { vm.set(it) },
             pickFolder = { audio -> pickingAudio = audio; folderPicker.launch(null) },
             resetFolder = { vm.resetFolder(it) },
             updateYtDlp = { vm.updateYtDlp() },
+            checkAppUpdate = { updates.check() },
             importCookies = { cookiePicker.launch(arrayOf("text/plain", "text/*", "application/octet-stream")) },
             removeCookies = vm::removeCookies,
             exportSettings = { exporter.launch("yoinks-settings.json") },
@@ -406,7 +413,10 @@ fun SettingsScreen(ui: SettingsUi, callbacks: SettingsCallbacks, modifier: Modif
                 Text("No settings match “$query”.", modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            SettingsGroup("About", query, "version terms privacy license") {
+            SettingsGroup("About", query, "check for updates version terms privacy license") {
+                ActionRow("Yoinks updates", ui.appUpdateMessage.ifBlank { "Installed version ${com.yoinks.app.BuildConfig.VERSION_NAME}" }, onClick = callbacks.checkAppUpdate) {
+                    TextActionButton("Check for updates", callbacks.checkAppUpdate, enabled = !ui.checkingAppUpdate)
+                }
                 ActionRow("About Yoinks", "Version, open-source licenses", onClick = { callbacks.openLegal(LegalPage.ABOUT) })
                 ActionRow("Terms of use", onClick = { callbacks.openLegal(LegalPage.TERMS) })
                 ActionRow("Privacy", onClick = { callbacks.openLegal(LegalPage.PRIVACY) })
@@ -521,7 +531,7 @@ private val SETTINGS_SEARCH = listOf(
     "yt-dlp version update cookies browser login",
     "health check ffmpeg storage connection working",
     "your data export import json clear history reset defaults",
-    "about version terms privacy license",
+    "about check for updates version terms privacy license",
 )
 
 @Composable

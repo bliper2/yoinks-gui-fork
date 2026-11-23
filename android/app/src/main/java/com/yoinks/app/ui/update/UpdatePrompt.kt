@@ -42,9 +42,29 @@ class UpdateViewModel @Inject constructor(val updater: AppUpdater) : ViewModel()
     private val _state = MutableStateFlow<UpdateState>(UpdateState.None)
     val state: StateFlow<UpdateState> = _state
 
-    init {
+    private val _checking = MutableStateFlow(false)
+    val checking: StateFlow<Boolean> = _checking
+    private val _checkMessage = MutableStateFlow("")
+    val checkMessage: StateFlow<String> = _checkMessage
+
+    init { check(manual = false) }
+
+    fun check(manual: Boolean = true) {
+        if (_checking.value || _state.value is UpdateState.Downloading) return
+        _checking.value = true
+        if (manual) _checkMessage.value = "Checking GitHub Releases…"
         viewModelScope.launch {
-            runCatching { updater.check() }.getOrNull()?.let { _state.value = UpdateState.Available(it) }
+            try {
+                val update = updater.check()
+                if (update != null) _state.value = UpdateState.Available(update)
+                if (manual) _checkMessage.value = if (update == null) "Yoinks is up to date." else "Yoinks ${update.version} is available."
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (manual) _checkMessage.value = if (e is AppUpdater.MissingApk) "The new release has no APK for this phone yet." else "Could not check for updates. Please try again."
+            } finally {
+                _checking.value = false
+            }
         }
     }
 
