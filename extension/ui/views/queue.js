@@ -50,32 +50,59 @@
     const pauseAll = button({ icon: 'pause', label: 'Pause all', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'pauseAll' }) })
     const resumeAll = button({ icon: 'play', label: 'Resume all', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'resumeAll' }) })
     const clearFailed = button({ icon: 'trash', label: 'Remove failed', variant: 'ghost', size: 'sm', onClick: () => send({ type: 'clearFinished' }) })
+    const queueActions = h('span', { class: 'section-actions' }, pauseAll, resumeAll, clearFailed)
+    const queueEmpty = h('div', { class: 'queue-empty', hidden: true },
+      icon('download', { size: 24 }),
+      h('p', { text: 'No downloads queued' }),
+    )
     const queueSection = h(
       'section',
       { class: 'list-section', 'aria-label': 'Queue', hidden: true },
-      h('h2', {}, h('span', {}, 'Queue ', queueCount), h('span', { class: 'section-actions' }, pauseAll, resumeAll, clearFailed)),
+      h('h2', {}, h('span', {}, 'Queue ', queueCount), queueActions),
+      queueEmpty,
       queueList,
     )
 
     const recentList = h('div', { class: 'recent-list' })
     const recentEmpty = h('p', { class: 'recent-empty', hidden: true })
-    // Search appears once the list is long enough to need it.
+    const pageSize = 20
+    let limit = pageSize
+    let sourceLinks = []
+    const refreshLibrary = () => {
+      limit = pageSize
+      if (lastView) renderHistory(lastView.history)
+    }
     const recentSearch = h('input', {
-      class: 'field recent-search',
-      type: 'search',
-      placeholder: 'Search downloads',
-      'aria-label': 'Search recent downloads',
-      spellcheck: 'false',
-      hidden: true,
-      oninput: () => lastView && renderHistory(lastView.history),
+      class: 'field recent-search', type: 'search', placeholder: 'Search history',
+      'aria-label': 'Search history', spellcheck: 'false', oninput: refreshLibrary,
     })
+    function select(label, options) {
+      return h('select', { class: 'field', 'aria-label': label, onchange: refreshLibrary },
+        options.map(([value, text]) => h('option', { value, text })))
+    }
+    const kind = select('Filter downloads', [['all', 'All downloads'], ['audio', 'Audio'], ['video', 'Video'], ['folder', 'Playlists']])
+    const sort = select('Sort downloads', [['new', 'Newest first'], ['old', 'Oldest first'], ['title', 'Title A–Z']])
+    const copyLinks = button({ text: 'Copy links', icon: 'copy', variant: 'secondary', onClick: async () => {
+      const count = sourceLinks.length
+      const ok = await copyText(sourceLinks.join('\n'))
+      send({ type: 'toast', kind: ok ? 'success' : 'error', text: ok ? `Copied ${count} source link${count === 1 ? '' : 's'}.` : 'Could not copy links.' })
+    } })
+    const tools = h('div', { class: 'library-tools' }, recentSearch, kind, sort, copyLinks)
+    const more = button({ text: 'Show more', variant: 'secondary', class: 'library-more', onClick: () => {
+      limit += pageSize
+      renderHistory(lastView.history)
+    } })
+    const clearHistory = button({ text: 'Clear history', variant: 'link', onClick: () => {
+      if (window.confirm('Clear all download history? Your files will be kept.')) send({ type: 'history:clear' })
+    } })
     const recentSection = h(
       'section',
       { class: 'list-section', 'aria-label': 'Recent downloads', hidden: true },
-      h('h2', {}, h('span', { text: 'Recent' }), button({ text: 'Clear', variant: 'link', onClick: () => send({ type: 'history:clear' }) })),
-      recentSearch,
+      h('h2', {}, h('span', { text: 'Recent downloads' }), clearHistory),
+      tools,
       recentList,
       recentEmpty,
+      more,
     )
 
     // ---------- queue rows (updated in place so buttons keep focus) ----------
@@ -104,10 +131,9 @@
             label: 'Copy details for support',
             variant: 'ghost',
             size: 'sm',
-            onClick: async event => {
+            onClick: async () => {
               const ok = await copyText(debugReport({ bridge, view: lastView, job }))
               send({ type: 'toast', kind: ok ? 'success' : 'error', text: ok ? 'Details copied. Paste them in Discord or a GitHub issue.' : 'Could not copy.' })
-              event.currentTarget.blur()
             },
           }),
         )
@@ -117,8 +143,11 @@
     }
 
     function renderQueue(queue) {
-      queueSection.hidden = queue.length === 0
+      queueSection.hidden = bridge.platform !== 'desktop' && queue.length === 0
+      queueEmpty.hidden = queue.length > 0
+      queueActions.hidden = queue.length === 0
       const active = queue.filter(j => j.phase === 'downloading').length
+      queueCount.hidden = queue.length === 0
       queueCount.textContent = active ? `(${active} active, ${queue.length} total)` : `(${queue.length})`
       pauseAll.disabled = !queue.some(j => j.phase === 'downloading' || j.phase === 'queued')
       resumeAll.disabled = !queue.some(j => j.phase === 'paused')
@@ -152,27 +181,45 @@
 
     // ---------- recent ----------
 
-    const SEARCH_AFTER = 6
-    const SHOWN = 20
     let renderedHistory = null
     function renderHistory(history) {
+      if (!history.length) {
+        recentSearch.value = ''
+        kind.value = 'all'
+        sort.value = 'new'
+        limit = pageSize
+      }
       const query = recentSearch.value.trim().toLowerCase()
-      const key = JSON.stringify([query, history.map(e => e.id)])
-      recentSection.hidden = history.length === 0
-      recentSearch.hidden = history.length <= SEARCH_AFTER && !query
+      const key = JSON.stringify([query, kind.value, sort.value, limit, history.map(e => e.id)])
       if (key === renderedHistory) return
       renderedHistory = key
+      recentSection.hidden = bridge.platform !== 'desktop' && history.length === 0
+      clearHistory.hidden = tools.hidden = history.length === 0
       const words = query.split(/\s+/).filter(Boolean)
-      const matches = words.length ? history.filter(entry => words.every(word => `${entry.title} ${entry.label ?? ''}`.toLowerCase().includes(word))) : history
+      const matches = history.filter(entry => {
+        if (kind.value === 'folder' && !entry.folder) return false
+        if (['audio', 'video'].includes(kind.value) && entry.kind !== kind.value) return false
+        const haystack = [entry.title, entry.label, entry.url, filenameOf(entry.filepath ?? '')].join(' ').toLowerCase()
+        return words.every(word => haystack.includes(word))
+      })
+      matches.sort((a, b) => {
+        if (sort.value === 'title') return String(a.title ?? '').localeCompare(String(b.title ?? ''), undefined, { numeric: true })
+        return sort.value === 'old' ? a.at - b.at : b.at - a.at
+      })
+      sourceLinks = [...new Set(matches.map(entry => entry.url).filter(Boolean))]
+      copyLinks.disabled = sourceLinks.length === 0
+      more.hidden = matches.length <= limit
       recentEmpty.hidden = matches.length > 0
-      recentEmpty.textContent = matches.length ? '' : `Nothing in your recent downloads matches “${recentSearch.value.trim()}”.`
+      recentEmpty.textContent = history.length ? 'No matches. Try another search or media type.' : 'Completed downloads will appear here.'
       recentList.replaceChildren(
-        ...matches.slice(0, SHOWN).map(entry =>
+        ...matches.slice(0, limit).map(entry =>
           h(
             'div',
             { class: 'recent-row' },
             icon(entry.kind === 'audio' ? 'music' : entry.folder ? 'list' : 'film', { size: 16 }),
-            h('span', { class: 'recent-title', title: entry.folder ?? entry.filepath, text: entry.title }),
+            h('div', { class: 'recent-media', title: entry.folder ?? entry.filepath },
+              h('span', { class: 'recent-title', text: entry.title }),
+              h('span', { class: 'recent-format', text: [entry.label, filenameOf(entry.filepath ?? '')].filter(Boolean).join(' · ') })),
             h('span', { class: 'recent-when', text: timeAgo(entry.at) }),
             h(
               'span',

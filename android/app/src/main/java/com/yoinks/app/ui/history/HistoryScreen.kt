@@ -4,6 +4,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,13 +18,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
@@ -36,9 +42,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
@@ -87,8 +96,6 @@ fun shareFile(context: Context, item: HistoryEntity) {
 
 /** Every word of the search must appear in the title, file name or website. */
 object HistorySearch {
-    const val SHOW_AFTER = 6
-
     fun filter(items: List<HistoryEntity>, query: String): List<HistoryEntity> {
         val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
         if (words.isEmpty()) return items
@@ -122,27 +129,49 @@ fun HistoryScreen(
     modifier: Modifier = Modifier,
 ) {
     var confirm by remember { mutableStateOf<HistoryEntity?>(null) }
-    var query by remember { mutableStateOf("") }
-    val shown = remember(items, query) { HistorySearch.filter(items, query) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var media by rememberSaveable { mutableStateOf("All media") }
+    var order by rememberSaveable { mutableStateOf("Newest first") }
+    val clipboard = LocalClipboardManager.current
+    val shown = remember(items, query, media, order) {
+        val matches = HistorySearch.filter(items, query).filter {
+            when (media) {
+                "Audio" -> it.isAudio
+                "Video" -> !it.isAudio
+                else -> true
+            }
+        }
+        when (order) {
+            "Title A–Z" -> matches.sortedBy { it.title.lowercase() }
+            "Largest first" -> matches.sortedByDescending { it.sizeBytes }
+            "Oldest first" -> matches.sortedBy { it.createdAt }
+            else -> matches.sortedByDescending { it.createdAt }
+        }
+    }
+    val links = remember(shown) { shown.map { it.sourceUrl }.filter { it.isNotBlank() }.distinct() }
     Column(modifier.fillMaxSize()) {
         Text("History", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
         if (items.isEmpty()) {
             EmptyState(Icons.Rounded.History, "No downloads yet", "Everything you download is listed here.")
             return@Column
         }
-        // Search appears once the list is long enough to need it.
-        if (items.size > HistorySearch.SHOW_AFTER || query.isNotEmpty()) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("Search downloads") },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
-            )
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text("Search history") },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        )
+        FlowRow(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            HistoryChoice(media, listOf("All media", "Audio", "Video")) { media = it }
+            HistoryChoice(order, listOf("Newest first", "Oldest first", "Title A–Z", "Largest first")) { order = it }
+            IconAction(Icons.Rounded.ContentCopy, "Copy matching source links", enabled = links.isNotEmpty(), onClick = {
+                clipboard.setText(AnnotatedString(links.joinToString("\n")))
+            })
         }
         if (shown.isEmpty()) {
-            EmptyState(Icons.Rounded.Search, "Nothing found", "No download matches “${query.trim()}”.")
+            EmptyState(Icons.Rounded.Search, "Nothing found", "Try another search or media type.")
             return@Column
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
@@ -158,15 +187,35 @@ fun HistoryScreen(
                     },
                     leadingContent = { Thumbnail(item.thumbnail, item.isAudio, 48.dp) },
                     trailingContent = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconAction(Icons.AutoMirrored.Rounded.OpenInNew, "Open ${item.title}", { onOpen(item) })
-                            IconAction(Icons.Rounded.Share, "Share ${item.title}", { onShare(item) })
-                            IconAction(Icons.Rounded.Refresh, "Download ${item.title} again", { onRedownload(item) })
-                            IconAction(Icons.Rounded.Delete, "Delete ${item.title}", { confirm = item })
+                        Box {
+                            var menuOpen by remember { mutableStateOf(false) }
+                            IconAction(Icons.Rounded.MoreVert, "More actions for ${item.title}", { menuOpen = true })
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Share") },
+                                    leadingIcon = { Icon(Icons.Rounded.Share, null) },
+                                    onClick = { menuOpen = false; onShare(item) },
+                                )
+                                if (item.sourceUrl.isNotBlank()) DropdownMenuItem(
+                                    text = { Text("Copy source link") },
+                                    leadingIcon = { Icon(Icons.Rounded.ContentCopy, null) },
+                                    onClick = { menuOpen = false; clipboard.setText(AnnotatedString(item.sourceUrl)) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Download again") },
+                                    leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
+                                    onClick = { menuOpen = false; onRedownload(item) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Remove from history") },
+                                    leadingIcon = { Icon(Icons.Rounded.Delete, null) },
+                                    onClick = { menuOpen = false; confirm = item },
+                                )
+                            }
                         }
                     },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.heightIn(min = 72.dp),
+                    modifier = Modifier.animateItem().clickable(onClickLabel = "Open file") { onOpen(item) }.heightIn(min = 72.dp),
                 )
             }
         }
@@ -188,6 +237,19 @@ fun HistoryScreen(
             confirmButton = { TextButton(onClick = { onDelete(item, alsoFile); confirm = null }) { Text(if (alsoFile) "Delete" else "Remove") } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun HistoryChoice(selected: String, values: List<String>, onSelect: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { open = true }) { Text(selected) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            values.forEach { value ->
+                DropdownMenuItem(text = { Text(value) }, onClick = { onSelect(value); open = false })
+            }
+        }
     }
 }
 

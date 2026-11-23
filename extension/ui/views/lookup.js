@@ -52,10 +52,13 @@
     )
     const inputPane = h(
       'div',
-      { class: 'pane' },
-      h('h1', { class: 'headline', text: 'Yoink a video or song' }),
-      h('p', { class: 'sub', text: 'YouTube, YouTube Music, Spotify, SoundCloud, Bandcamp, TikTok, and 1,800+ more sites. Type words to search YouTube.' }),
+      { class: 'pane lookup-start' },
+      h('h1', { class: 'headline', text: 'New download' }),
+      h('p', { class: 'sub', text: 'Paste a media link or search YouTube by title.' }),
       form,
+      bridge.platform === 'desktop'
+        ? button({ icon: 'list', text: 'Add several links', variant: 'link', class: 'batch-shortcut', onClick: () => ctx.go('batch') })
+        : null,
     )
 
     // Popup just opened on a video page: look it up straight away (unless it

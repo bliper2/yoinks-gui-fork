@@ -485,17 +485,7 @@
 
     // ---------- commands ----------
 
-    // Links pasted from chat or a sentence often carry the punctuation after
-    // them: "see https://youtu.be/x, or (https://youtu.be/y)."
-    function trimLink(link) {
-      let url = link.replace(/[.,;:!?'"\]}]+$/, '')
-      while (url.endsWith(')') && (url.match(/\(/g) ?? []).length < (url.match(/\)/g) ?? []).length) url = url.slice(0, -1).replace(/[.,;:!?'"\]}]+$/, '')
-      return url
-    }
-
-    function urlsFrom(text) {
-      return [...new Set((String(text ?? '').match(/https?:\/\/[^\s<>"']+/g) ?? []).map(trimLink).filter(Boolean))].slice(0, 500)
-    }
+    const { urlsFrom } = Sites
 
     let watching = false
 

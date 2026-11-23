@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.2.0
+
+- Windows and Linux: the wider download view puts the queue beside the link field and history below. Narrow windows switch to one column.
+- Windows, Linux and extension: search history by title, filename or source, filter by media type, sort by date or title, and copy links for all matches. Show more reaches older entries. Settings adds compact list spacing and an animation switch.
+- Android: tap a history entry to open it. Filter audio or video, sort by date, title or file size, and copy individual or matching source links. Queue cards give titles more room.
+- Batch downloads can run in reverse order. The displayed count now matches the unique links accepted by the queue.
+- Fixed accidental history clearing from the download view, repeated text-file imports, mislabeled appearance controls for screen readers, and excessive memory use when importing large files on Android.
+
 ## 3.1.0
 
 - Fixed (Windows, Linux, extension): YouTube downloads failing or missing qualities. yt-dlp now needs a JavaScript runtime for YouTube, and Yoinks gives it its own, so there is nothing to install.

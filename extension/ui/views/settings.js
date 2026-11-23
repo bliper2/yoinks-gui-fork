@@ -102,8 +102,9 @@
       const control = h('div', { class: 'segmented', role: 'radiogroup' }, buttons)
       control.addEventListener('keydown', event => arrowRadio(event, buttons, b => save(field.key, b.dataset.value)))
       const shell = fieldShell(field, control)
-      control.setAttribute('aria-labelledby', 'set-theme-l')
-      shell.row.querySelector('label').id = 'set-theme-l'
+      const labelId = `set-${field.key}-label`
+      control.setAttribute('aria-labelledby', labelId)
+      shell.row.querySelector('label').id = labelId
       return {
         ...shell,
         set: v => buttons.forEach(b => {

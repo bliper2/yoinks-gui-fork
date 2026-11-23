@@ -46,8 +46,18 @@
   <main>
     <h1>Changelog</h1>
     <p class="lead">What changed in each version of Yoinks.</p>
+    <section class="release" id="v3.2.0">
+      <h2>3.2.0 <span class="latest">Latest</span></h2>
+      <ul>
+        <li>Windows and Linux: the wider download view puts the queue beside the link field and history below. Narrow windows switch to one column.</li>
+        <li>Windows, Linux and extension: search history by title, filename or source, filter by media type, sort by date or title, and copy links for all matches. Show more reaches older entries. Settings adds compact list spacing and an animation switch.</li>
+        <li>Android: tap a history entry to open it. Filter audio or video, sort by date, title or file size, and copy individual or matching source links. Queue cards give titles more room.</li>
+        <li>Batch downloads can run in reverse order. The displayed count now matches the unique links accepted by the queue.</li>
+        <li>Fixed accidental history clearing from the download view, repeated text-file imports, mislabeled appearance controls for screen readers, and excessive memory use when importing large files on Android.</li>
+      </ul>
+    </section>
     <section class="release" id="v3.1.0">
-      <h2>3.1.0 <span class="latest">Latest</span></h2>
+      <h2>3.1.0</h2>
       <ul>
         <li>Fixed (Windows, Linux, extension): YouTube downloads failing or missing qualities. yt-dlp now needs a JavaScript runtime for YouTube, and Yoinks gives it its own, so there is nothing to install.</li>
         <li>Fixed (Windows portable): shortcuts pinned to Start or made on the desktop from the running app did not open Yoinks. They now point at the portable file again every time it starts.</li>

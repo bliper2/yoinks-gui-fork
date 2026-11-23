@@ -147,7 +147,7 @@ fs.watchFile(store.SETTINGS_PATH, { interval: 1000 }, () => controller.command({
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 460,
+    width: 980,
     height: 720,
     minWidth: 380,
     minHeight: 520,

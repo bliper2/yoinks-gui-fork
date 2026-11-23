@@ -9,9 +9,7 @@
 
   const MAX_FILE = 2 * 1024 * 1024
 
-  function countLinks(text) {
-    return new Set(String(text).match(/https?:\/\/[^\s<>"']+/g) ?? []).size
-  }
+  const { urlsFrom } = root.YoinksSites
 
   function create(ctx) {
     const { send, bridge } = ctx
@@ -40,12 +38,14 @@
       for (const preset of presets) format.append(h('option', { value: `preset:${preset.id}`, text: `Preset: ${preset.name}`, dataset: { preset: '1' } }))
       format.value = [...format.options].some(o => o.value === chosen) ? chosen : 'default'
     }
+    const order = h('select', { class: 'field', 'aria-label': 'Batch order' },
+      h('option', { value: 'original', text: 'As entered' }), h('option', { value: 'reverse', text: 'Reverse order' }))
     const count = h('span', { id: 'batch-hint', class: 'hint' })
     const add = button({ icon: 'download', text: 'Add to queue', variant: 'primary', size: 'lg', type: 'submit' })
     const fileInput = h('input', { type: 'file', accept: '.txt,text/plain', hidden: true })
 
     function update() {
-      const n = countLinks(area.value)
+      const n = urlsFrom(area.value).length
       count.textContent = n ? `${n} link${n === 1 ? '' : 's'} found` : 'No links yet'
       add.disabled = n === 0
       add.querySelector('span').textContent = n > 1 ? `Add ${n} to queue` : 'Add to queue'
@@ -54,12 +54,21 @@
     async function loadFile(file) {
       if (!file) return
       if (file.size > MAX_FILE) return send({ type: 'toast', kind: 'error', text: 'That file is too big (2 MB max).' })
-      const text = await file.text()
+      let text
+      try {
+        text = await file.text()
+      } catch {
+        return send({ type: 'toast', kind: 'error', text: 'Could not read that text file.' })
+      }
       area.value = [area.value.trim(), text.trim()].filter(Boolean).join('\n')
       update()
     }
 
-    fileInput.addEventListener('change', () => loadFile(fileInput.files[0]))
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0]
+      fileInput.value = ''
+      loadFile(file)
+    })
     area.addEventListener('input', update)
     area.addEventListener('dragover', event => (event.preventDefault(), area.classList.add('dragging')))
     area.addEventListener('dragleave', () => area.classList.remove('dragging'))
@@ -124,9 +133,11 @@
         class: 'card batch',
         onsubmit: event => {
           event.preventDefault()
-          if (!countLinks(area.value)) return
+          const links = urlsFrom(area.value)
+          if (!links.length) return
+          if (order.value === 'reverse') links.reverse()
           const preset = format.value.startsWith('preset:') ? format.value.slice(7) : null
-          send({ type: 'batch', text: area.value, format: preset ? 'default' : format.value, preset })
+          send({ type: 'batch', text: links.join('\n'), format: preset ? 'default' : format.value, preset })
           area.value = ''
           update()
           ctx.go('home')
@@ -135,7 +146,7 @@
       h('h1', { class: 'headline' }, icon('list', { size: 22 }), 'Batch'),
       h('p', { class: 'sub', text: 'Paste several links, drop a .txt file here, or open one. Everything joins the queue.' }),
       area,
-      count,
+      h('div', { class: 'row wrap' }, count, h('label', { class: 'inline-label' }, 'Order ', order)),
       h('div', { class: 'row wrap' }, openFile, fileInput, h('label', { class: 'inline-label' }, 'Format ', format)),
       add,
     )

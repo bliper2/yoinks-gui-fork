@@ -129,6 +129,8 @@
 
     { key: 'style', section: 'Look', type: 'segmented', options: STYLES, default: 'clean', label: 'Style' },
     { key: 'theme', section: 'Look', type: 'segmented', options: THEMES, default: 'system', label: 'Theme' },
+    { key: 'listDensity', section: 'Look', type: 'segmented', options: [['comfortable', 'Comfortable'], ['compact', 'Compact']], default: 'comfortable', label: 'Download list spacing' },
+    { key: 'uiMotion', section: 'Look', type: 'segmented', options: [['system', 'Follow system'], ['off', 'Off']], default: 'system', label: 'Interface animation' },
     { key: 'navBar', section: 'Look', type: 'segmented', options: NAV_BARS, default: 'top', label: 'Navigation buttons' },
     { key: 'accent', section: 'Look', type: 'accent', options: ACCENTS, default: 'violet', label: 'Accent color' },
     { key: 'customAccent', section: 'Look', type: 'color', default: '#8b6bff', label: 'Custom color', hidden: true },

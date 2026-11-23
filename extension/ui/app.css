@@ -152,6 +152,203 @@ body {
   flex-wrap: wrap;
 }
 
+/* Desktop workspace. The extension popup keeps its compact layout. */
+[data-mode='desktop'] .app-header {
+  flex: none;
+  height: 56px;
+  padding-inline: clamp(12px, 3vw, 36px) 10px;
+}
+[data-mode='desktop'] .brand {
+  font-size: 20px;
+  letter-spacing: -.045em;
+  color: var(--text);
+}
+[data-mode='desktop'] .brand img {
+  width: 24px;
+  height: 24px;
+}
+[data-mode='desktop'] .app-main {
+  padding: clamp(16px, 3.4vw, 42px);
+  padding-bottom: 100px;
+}
+[data-mode='desktop'] .app-main > * {
+  max-width: 840px;
+  margin-inline: auto;
+}
+[data-mode='desktop'] .view-home,
+[data-mode='desktop'] .batch-view {
+  display: grid;
+  align-items: start;
+  gap: 18px;
+  max-width: 1200px;
+}
+[data-mode='desktop'] .view-home > *,
+[data-mode='desktop'] .batch-view > * {
+  min-width: 0;
+}
+[data-mode='desktop'] .lookup,
+[data-mode='desktop'] .batch,
+[data-mode='desktop'] .settings-section {
+  padding: clamp(16px, 2.4vw, 28px);
+}
+[data-mode='desktop'] .lookup-start .headline,
+[data-mode='desktop'] .settings > .headline {
+  font-size: clamp(26px, 3.4vw, 38px);
+  letter-spacing: -.045em;
+  line-height: 1.15;
+}
+[data-mode='desktop'] .lookup-start .sub {
+  font-size: 14px;
+  margin: 4px 0 20px;
+}
+[data-mode='desktop'] .url-field {
+  font: 14px var(--font-ui);
+}
+[data-mode='desktop'] .pane > .batch-shortcut {
+  align-self: flex-start;
+  margin-top: 18px;
+}
+[data-mode='desktop'] .lists {
+  display: grid;
+  gap: 16px;
+}
+[data-mode='desktop'] .list-section {
+  margin: 0;
+  padding: 16px;
+  border: var(--line) solid var(--card-border);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+}
+[data-mode='desktop'] .list-section h2 {
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+.queue-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 26px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+[data-mode='desktop'] .list-section .recent-empty {
+  margin: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+[data-mode='desktop'] .lookup {
+  border-radius: var(--radius-md);
+}
+[data-mode='desktop'] .list-section {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+[data-mode='desktop'] .list-section h2 {
+  min-height: 36px;
+  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 8px;
+  letter-spacing: -.02em;
+}
+[data-mode='desktop'] .queue-empty {
+  border: 0;
+}
+[data-mode='desktop'] .view-home .list-section:last-child {
+  margin-top: 8px;
+}
+.library-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block: 12px;
+}
+.library-tools .recent-search {
+  flex: 1 1 160px;
+  width: auto;
+  margin: 0;
+}
+.library-tools select {
+  max-width: 100%;
+}
+.library-more {
+  margin-top: 12px;
+}
+.recent-media {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.recent-format {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.recent-list .recent-row {
+  min-height: 52px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+}
+[data-density='compact'] .recent-row {
+  min-height: 36px;
+}
+[data-density='compact'] .recent-format {
+  display: none;
+}
+[data-density='compact'] .job {
+  padding-block: 4px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion='off']) .job {
+    animation: queue-arrive 180ms var(--ease) both;
+  }
+  :root:not([data-motion='off']) .app-main > * {
+    animation: workspace-enter 150ms ease-out;
+  }
+}
+@keyframes queue-arrive {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes workspace-enter {
+  from { opacity: .65; transform: translateY(2px); }
+}
+@media (min-width: 840px) {
+  [data-mode='desktop'] .view-home:has(.lookup-start) .list-section:has(.queue-empty:not([hidden])) {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+  [data-mode='desktop'] .queue-empty {
+    flex: 1;
+    align-content: center;
+  }
+  [data-mode='desktop'] .view-home .lists {
+    display: contents;
+  }
+  [data-mode='desktop'] .view-home .list-section:last-child {
+    grid-column: 1 / -1;
+  }
+  [data-mode='desktop'] .view-home,
+  [data-mode='desktop'] .batch-view {
+    grid-template-columns: minmax(0, 1.2fr) minmax(340px, 1fr);
+  }
+}
+@media (max-width: 540px) {
+  [data-mode='desktop'] .app-header .nav-label {
+    display: none;
+  }
+  [data-mode='desktop'] .setting {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- lookup card ---------- */
 
 .pane {

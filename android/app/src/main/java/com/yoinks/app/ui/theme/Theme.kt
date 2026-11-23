@@ -129,7 +129,13 @@ private fun ColorScheme.styled(style: UiStyle, dark: Boolean): ColorScheme = whe
 /** A Material 3 scheme from one accent color (tones mixed toward white/black). */
 fun schemeFromAccent(accent: Color, dark: Boolean): ColorScheme {
     fun mix(color: Color, with: Color, amount: Float) = color.copy(alpha = 1f - amount).compositeOver(with)
-    fun on(background: Color) = if (background.luminance() > 0.4f) Color(0xFF0A0D13) else Color.White
+    fun on(background: Color): Color {
+        val ink = Color(0xFF0A0D13)
+        val luminance = background.luminance() + 0.05f
+        val darkContrast = luminance / (ink.luminance() + 0.05f)
+        val whiteContrast = 1.05f / luminance
+        return if (darkContrast >= whiteContrast) ink else Color.White
+    }
     val secondary = Color(0xFF22D3EE)
     return if (dark) {
         val primary = mix(accent, Color.White, 0.25f)

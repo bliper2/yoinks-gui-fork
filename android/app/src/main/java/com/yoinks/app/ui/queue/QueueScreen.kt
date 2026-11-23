@@ -111,17 +111,24 @@ fun QueueScreen(jobs: List<DownloadJob>, actions: QueueActions, selectedId: Stri
             verticalArrangement = Arrangement.Center,
         ) {
             val active = jobs.count { it.phase.isActive }
-            Text(
-                if (jobs.isEmpty()) "Queue" else "Queue · $active active · ${jobs.size} total",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.CenterVertically).weight(1f),
-            )
-            IconAction(Icons.Rounded.Pause, "Pause all", actions.pauseAll, enabled = jobs.any { it.phase.isActive || it.phase.isPending })
-            IconAction(Icons.Rounded.PlayArrow, "Resume all", actions.resumeAll, enabled = jobs.any { it.phase == JobPhase.PAUSED })
-            IconAction(Icons.Rounded.DeleteSweep, "Remove failed", actions.clearFailed, enabled = jobs.any { it.phase == JobPhase.FAILED })
+            Column(Modifier.align(Alignment.CenterVertically).weight(1f)) {
+                Text("Queue", style = MaterialTheme.typography.headlineSmall)
+                if (jobs.isNotEmpty()) {
+                    Text(
+                        "$active active · ${jobs.size} total",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (jobs.isNotEmpty()) {
+                IconAction(Icons.Rounded.Pause, "Pause all", actions.pauseAll, enabled = jobs.any { it.phase.isActive || it.phase.isPending })
+                IconAction(Icons.Rounded.PlayArrow, "Resume all", actions.resumeAll, enabled = jobs.any { it.phase == JobPhase.PAUSED })
+                IconAction(Icons.Rounded.DeleteSweep, "Remove failed", actions.clearFailed, enabled = jobs.any { it.phase == JobPhase.FAILED })
+            }
         }
         if (jobs.isEmpty()) {
-            EmptyState(Icons.Rounded.Downloading, "No downloads running", "Share a link to Yoinks or paste one on the Home screen.")
+            EmptyState(Icons.Rounded.Downloading, "No downloads running", "Share a link to Yoinks or paste one in Download.")
             return@Column
         }
         LazyColumn(contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -174,7 +181,6 @@ private fun JobCard(job: DownloadJob, actions: QueueActions, selected: Boolean) 
                         Chip(formatLabel(job))
                     }
                 }
-                JobButtons(job, actions)
             }
             if (!failed && job.phase != JobPhase.PAUSED) {
                 val fraction = job.progress?.fraction
@@ -182,11 +188,15 @@ private fun JobCard(job: DownloadJob, actions: QueueActions, selected: Boolean) 
                 if (overall == null || job.phase == JobPhase.PREPARING) LinearProgressIndicator(Modifier.fillMaxWidth().padding(end = 8.dp))
                 else LinearProgressIndicator(progress = { overall }, modifier = Modifier.fillMaxWidth().padding(end = 8.dp))
             }
-            Text(
-                statusLine(job),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (failed) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    statusLine(job),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (failed) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                JobButtons(job, actions)
+            }
         }
     }
 }

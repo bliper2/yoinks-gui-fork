@@ -123,6 +123,8 @@
       lastLook = look
       root.YoinksTheme.apply(view.settings)
     }
+    document.documentElement.dataset.density = view.settings.listDensity ?? 'comfortable'
+    document.documentElement.dataset.motion = view.settings.uiMotion ?? 'system'
     placeNav(view.settings.navBar)
 
     const locked = needsTerms(view)

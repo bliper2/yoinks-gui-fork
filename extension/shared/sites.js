@@ -155,8 +155,20 @@
     return [...found]
   }
 
+  // Links pasted from chat or a sentence often carry the punctuation after
+  // them: "see https://youtu.be/x, or (https://youtu.be/y)."
+  function trimLink(link) {
+    let url = link.replace(/[.,;:!?'"\]}]+$/, '')
+    while (url.endsWith(')') && (url.match(/\(/g) ?? []).length < (url.match(/\)/g) ?? []).length) url = url.slice(0, -1).replace(/[.,;:!?'"\]}]+$/, '')
+    return url
+  }
+
+  function urlsFrom(text) {
+    return [...new Set((String(text ?? '').match(/https?:\/\/[^\s<>"']+/g) ?? []).map(trimLink).filter(Boolean))].slice(0, 500)
+  }
+
   const isMusic = url => Boolean(siteFor(url)?.music)
   const isSpotify = url => Boolean(siteFor(url)?.spotify) && isMediaPage(url)
 
-  return { SITES, siteFor, isMediaPage, isPlaylistLink, hasPlaylistParam, sameMedia, mediaLinks, isMusic, isSpotify }
+  return { SITES, urlsFrom, siteFor, isMediaPage, isPlaylistLink, hasPlaylistParam, sameMedia, mediaLinks, isMusic, isSpotify }
 })
